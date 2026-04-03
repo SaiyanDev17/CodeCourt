@@ -10,7 +10,7 @@ Every team member must have the following tools installed before starting develo
 |------|---------|---------|
 | Node.js | 20.x LTS | `nvm install 20 && nvm use 20` |
 | Python | 3.11.x | `pyenv install 3.11 && pyenv global 3.11` |
-| Docker Desktop | Latest stable | https://www.docker.com/products/docker-desktop |
+| Docker Desktop1 | Latest stable | https://www.docker.com/products/docker-desktop |
 | Minikube | Latest stable | `brew install minikube` / https://minikube.sigs.k8s.io/docs/start |
 | kubectl | Latest stable | `brew install kubectl` / bundled with Docker Desktop |
 | Terraform CLI | 1.7.x | `brew install terraform` / https://developer.hashicorp.com/terraform/install |
