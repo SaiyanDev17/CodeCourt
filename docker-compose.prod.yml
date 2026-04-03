@@ -1,0 +1,44 @@
+# Production overrides for docker-compose.yml
+
+version: '3.8'
+
+services:
+  api:
+    image: ghcr.io/your-org/codecourt-api:latest
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  ai-service:
+    image: ghcr.io/your-org/codecourt-ai:latest
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  mongo:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  redis:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M

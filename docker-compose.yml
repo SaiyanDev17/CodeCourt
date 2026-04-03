@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Express API
+  api:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/codecourt
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+      - FRONTEND_URL=http://localhost:3000
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - codecourt-network
+
+  # FastAPI AI Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - EXPRESS_API_URL=http://api:5000
+    env_file:
+      - ./ai-service/.env
+    depends_on:
+      - api
+    networks:
+      - codecourt-network
+
+  # MongoDB
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - codecourt-network
+
+  # Redis
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - codecourt-network
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  codecourt-network:
+    driver: bridge

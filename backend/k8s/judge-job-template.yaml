@@ -1,0 +1,39 @@
+# K8s Job template for Judge execution
+# This is a template - actual jobs are created dynamically by k8s.spawner.js
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: judge-SUBMISSION_ID
+  namespace: codecourt
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: judge
+        image: ghcr.io/codecourt/judge-cpp:latest  # or judge-python
+        resources:
+          limits:
+            cpu: "1"
+            memory: "256Mi"
+          requests:
+            cpu: "500m"
+            memory: "128Mi"
+        env:
+        - name: SUBMISSION_ID
+          value: "SUBMISSION_ID"
+        - name: PROBLEM_ID
+          value: "PROBLEM_ID"
+        - name: TIME_LIMIT
+          value: "TIME_LIMIT"
+        - name: CODE
+          value: "BASE64_ENCODED_CODE"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL

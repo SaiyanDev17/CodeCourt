@@ -13,12 +13,12 @@
 ### 0.1 Tool Installation
 - [x] 0.1.1 Install Node.js 20.x: `nvm install 20 && nvm use 20` — **All**
 - [x] 0.1.2 Install Python 3.11: `pyenv install 3.11 && pyenv global 3.11` — **All**
-- [-] 0.1.3 Install Docker Desktop — **All**
-- [ ] 0.1.4 Install Minikube: `brew install minikube` — **All**
-- [ ] 0.1.5 Install kubectl: `brew install kubectl` — **All**
-- [ ] 0.1.6 Install Terraform: `brew install terraform` — **P1**
+- [x] 0.1.3 Install Docker Desktop — **All**
+- [x] 0.1.4 Install Minikube: `brew install minikube` — **All**
+- [x] 0.1.5 Install kubectl: `brew install kubectl` — **All**
+- [x] 0.1.6 Install Terraform: `brew install terraform` — **P1**
 - [ ] 0.1.7 Install MongoDB Compass — **All**
-- [ ] 0.1.8 Install Postman — **All**
+- [x] 0.1.8 Install Postman — **All**
 
 ### 0.2 Cloud Accounts
 - [ ] 0.2.1 Create MongoDB Atlas account + M0 cluster — **P1**
@@ -34,62 +34,62 @@
 ## PHASE 1: Folder Structure & Dependencies (Week 1)
 
 ### 1.1 Root Structure — P1
-- [ ] 1.1.1 Create `codecourt/` root directory
-- [ ] 1.1.2 Initialize Git: `git init && git branch -M main`
-- [ ] 1.1.3 Create `.gitignore` (node_modules, .env, __pycache__, .terraform, etc.)
-- [ ] 1.1.4 Create root `README.md` with project overview
-- [ ] 1.1.5 Create root `.env.example` with all required env vars documented
+- [x] 1.1.1 Create `codecourt/` root directory
+- [x] 1.1.2 Initialize Git: `git init && git branch -M main`
+- [x] 1.1.3 Create `.gitignore` (node_modules, .env, __pycache__, .terraform, etc.)
+- [x] 1.1.4 Create root `README.md` with project overview
+- [x] 1.1.5 Create root `.env.example` with all required env vars documented
 
 ### 1.2 Backend Folder Structure — P1
-- [ ] 1.2.1 Create `backend/` directory
-- [ ] 1.2.2 Create `backend/src/config/` (db.js, redis.js, s3.js, bullmq.js, constants.js)
-- [ ] 1.2.3 Create `backend/src/modules/auth/` (routes.js, controller.js, service.js, model.js, test.js)
-- [ ] 1.2.4 Create `backend/src/modules/problems/` (routes.js, controller.js, service.js, model.js, test.js)
-- [ ] 1.2.5 Create `backend/src/modules/submissions/` (routes.js, controller.js, service.js, model.js, test.js)
-- [ ] 1.2.6 Create `backend/src/modules/contests/` (routes.js, controller.js, service.js, model.js, test.js)
-- [ ] 1.2.7 Create `backend/src/modules/users/` (routes.js, controller.js, service.js)
-- [ ] 1.2.8 Create `backend/src/modules/agent/` (routes.js, controller.js)
-- [ ] 1.2.9 Create `backend/src/middleware/` (authGuard.js, roleGuard.js, errorHandler.js, rateLimit.js, validate.js)
-- [ ] 1.2.10 Create `backend/src/jobs/` (submission.queue.js, submission.worker.js, k8s.spawner.js)
-- [ ] 1.2.11 Create `backend/src/socket/` (index.js, verdict.socket.js, leaderboard.socket.js)
-- [ ] 1.2.12 Create `backend/src/cron/` (contest.cron.js)
-- [ ] 1.2.13 Create `backend/src/app.js` (Express app initialization)
-- [ ] 1.2.14 Create `backend/server.js` (HTTP server entry point)
-- [ ] 1.2.15 Create `backend/docker/judges/cpp/Dockerfile`
-- [ ] 1.2.16 Create `backend/docker/judges/python/Dockerfile`
-- [ ] 1.2.17 Create `backend/docker/Dockerfile` (main API Dockerfile)
-- [ ] 1.2.18 Create `backend/k8s/` (namespace.yaml, api-deployment.yaml, redis-deployment.yaml, judge-job-template.yaml, configmap.yaml, secrets.example.yaml, ingress.yaml)
-- [ ] 1.2.19 Create `backend/swagger/swagger.yaml`
-- [ ] 1.2.20 Create `backend/.env.example`
+- [x] 1.2.1 Create `backend/` directory
+- [x] 1.2.2 Create `backend/src/config/` (db.js, redis.js, s3.js, bullmq.js, constants.js)
+- [x] 1.2.3 Create `backend/src/modules/auth/` (routes.js, controller.js, service.js, model.js, test.js)
+- [x] 1.2.4 Create `backend/src/modules/problems/` (routes.js, controller.js, service.js, model.js, test.js)
+- [x] 1.2.5 Create `backend/src/modules/submissions/` (routes.js, controller.js, service.js, model.js, test.js)
+- [x] 1.2.6 Create `backend/src/modules/contests/` (routes.js, controller.js, service.js, model.js, test.js)
+- [x] 1.2.7 Create `backend/src/modules/users/` (routes.js, controller.js, service.js)
+- [x] 1.2.8 Create `backend/src/modules/agent/` (routes.js, controller.js)
+- [x] 1.2.9 Create `backend/src/middleware/` (authGuard.js, roleGuard.js, errorHandler.js, rateLimit.js, validate.js)
+- [x] 1.2.10 Create `backend/src/jobs/` (submission.queue.js, submission.worker.js, k8s.spawner.js)
+- [x] 1.2.11 Create `backend/src/socket/` (index.js, verdict.socket.js, leaderboard.socket.js)
+- [x] 1.2.12 Create `backend/src/cron/` (contest.cron.js)
+- [x] 1.2.13 Create `backend/src/app.js` (Express app initialization)
+- [x] 1.2.14 Create `backend/server.js` (HTTP server entry point)
+- [x] 1.2.15 Create `backend/docker/judges/cpp/Dockerfile`
+- [x] 1.2.16 Create `backend/docker/judges/python/Dockerfile`
+- [x] 1.2.17 Create `backend/docker/Dockerfile` (main API Dockerfile)
+- [x] 1.2.18 Create `backend/k8s/` (namespace.yaml, api-deployment.yaml, redis-deployment.yaml, judge-job-template.yaml, configmap.yaml, secrets.example.yaml, ingress.yaml)
+- [x] 1.2.19 Create `backend/swagger/swagger.yaml`
+- [x] 1.2.20 Create `backend/.env.example`
 
 ### 1.3 Backend Dependencies — P1
-- [ ] 1.3.1 Create `backend/package.json` with scripts (dev, start, test, lint)
-- [ ] 1.3.2 Install core: `npm install express mongoose dotenv cors`
-- [ ] 1.3.3 Install auth: `npm install jsonwebtoken bcrypt cookie-parser`
-- [ ] 1.3.4 Install queue: `npm install bullmq ioredis`
-- [ ] 1.3.5 Install real-time: `npm install socket.io`
-- [ ] 1.3.6 Install storage: `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
-- [ ] 1.3.7 Install validation: `npm install joi`
-- [ ] 1.3.8 Install rate limit: `npm install express-rate-limit rate-limit-redis`
-- [ ] 1.3.9 Install cron: `npm install node-cron`
-- [ ] 1.3.10 Install K8s client: `npm install @kubernetes/client-node`
-- [ ] 1.3.11 Install Swagger: `npm install swagger-ui-express yamljs`
-- [ ] 1.3.12 Install dev deps: `npm install -D nodemon eslint prettier jest supertest`
+- [x] 1.3.1 Create `backend/package.json` with scripts (dev, start, test, lint)
+- [x] 1.3.2 Install core: `npm install express mongoose dotenv cors`
+- [x] 1.3.3 Install auth: `npm install jsonwebtoken bcrypt cookie-parser`
+- [x] 1.3.4 Install queue: `npm install bullmq ioredis`
+- [x] 1.3.5 Install real-time: `npm install socket.io`
+- [x] 1.3.6 Install storage: `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
+- [x] 1.3.7 Install validation: `npm install joi`
+- [x] 1.3.8 Install rate limit: `npm install express-rate-limit rate-limit-redis`
+- [x] 1.3.9 Install cron: `npm install node-cron`
+- [x] 1.3.10 Install K8s client: `npm install @kubernetes/client-node`
+- [x] 1.3.11 Install Swagger: `npm install swagger-ui-express yamljs`
+- [x] 1.3.12 Install dev deps: `npm install -D nodemon eslint prettier jest supertest`
 
 ### 1.4 AI Service Folder Structure — P4
-- [ ] 1.4.1 Create `ai-service/` directory
-- [ ] 1.4.2 Create `ai-service/app/main.py` (FastAPI app init)
-- [ ] 1.4.3 Create `ai-service/app/config.py` (env vars)
-- [ ] 1.4.4 Create `ai-service/app/routers/hint.py` (POST /hint endpoint)
-- [ ] 1.4.5 Create `ai-service/app/agent/executor.py` (LangChain AgentExecutor)
-- [ ] 1.4.6 Create `ai-service/app/agent/tools.py` (tool definitions)
-- [ ] 1.4.7 Create `ai-service/app/agent/prompts.py` (system prompts)
-- [ ] 1.4.8 Create `ai-service/app/models/schemas.py` (Pydantic models)
-- [ ] 1.4.9 Create `ai-service/Dockerfile`
-- [ ] 1.4.10 Create `ai-service/.env.example`
+- [x] 1.4.1 Create `ai-service/` directory
+- [x] 1.4.2 Create `ai-service/app/main.py` (FastAPI app init)
+- [x] 1.4.3 Create `ai-service/app/config.py` (env vars)
+- [x] 1.4.4 Create `ai-service/app/routers/hint.py` (POST /hint endpoint)
+- [x] 1.4.5 Create `ai-service/app/agent/executor.py` (LangChain AgentExecutor)
+- [x] 1.4.6 Create `ai-service/app/agent/tools.py` (tool definitions)
+- [x] 1.4.7 Create `ai-service/app/agent/prompts.py` (system prompts)
+- [x] 1.4.8 Create `ai-service/app/models/schemas.py` (Pydantic models)
+- [x] 1.4.9 Create `ai-service/Dockerfile`
+- [x] 1.4.10 Create `ai-service/.env.example`
 
 ### 1.5 AI Service Dependencies — P4
-- [ ] 1.5.1 Create `ai-service/requirements.txt`
+- [x] 1.5.1 Create `ai-service/requirements.txt`
 - [ ] 1.5.2 Create Python venv: `python -m venv venv && source venv/bin/activate`
 - [ ] 1.5.3 Install FastAPI: `pip install fastapi uvicorn[standard]`
 - [ ] 1.5.4 Install LangChain: `pip install langchain langchain-groq`
@@ -99,67 +99,67 @@
 - [ ] 1.5.8 Freeze deps: `pip freeze > requirements.txt`
 
 ### 1.6 Frontend Folder Structure — P3
-- [ ] 1.6.1 Create `frontend/` directory
-- [ ] 1.6.2 Initialize Next.js 14: `npx create-next-app@latest frontend --app --tailwind --typescript`
-- [ ] 1.6.3 Create `frontend/app/layout.tsx` (root layout)
-- [ ] 1.6.4 Create `frontend/app/page.tsx` (landing page)
-- [ ] 1.6.5 Create `frontend/app/(auth)/login/page.tsx`
-- [ ] 1.6.6 Create `frontend/app/(auth)/register/page.tsx`
-- [ ] 1.6.7 Create `frontend/app/problems/page.tsx`
-- [ ] 1.6.8 Create `frontend/app/problems/[slug]/page.tsx`
-- [ ] 1.6.9 Create `frontend/app/contests/page.tsx`
-- [ ] 1.6.10 Create `frontend/app/contests/[id]/page.tsx`
-- [ ] 1.6.11 Create `frontend/app/contests/[id]/leaderboard/page.tsx`
-- [ ] 1.6.12 Create `frontend/app/profile/[username]/page.tsx`
-- [ ] 1.6.13 Create `frontend/components/Editor/MonacoEditor.tsx`
-- [ ] 1.6.14 Create `frontend/components/Editor/SubmitButton.tsx`
-- [ ] 1.6.15 Create `frontend/components/Leaderboard/LeaderboardTable.tsx`
-- [ ] 1.6.16 Create `frontend/components/Problem/ProblemCard.tsx`
-- [ ] 1.6.17 Create `frontend/components/Problem/ProblemStatement.tsx`
-- [ ] 1.6.18 Create `frontend/components/ui/` (Button.tsx, Badge.tsx, Navbar.tsx)
-- [ ] 1.6.19 Create `frontend/hooks/` (useSocket.ts, useAuth.ts, useSubmission.ts)
-- [ ] 1.6.20 Create `frontend/lib/` (api.ts, aiApi.ts, socket.ts)
-- [ ] 1.6.21 Create `frontend/store/auth.store.ts` (Zustand)
-- [ ] 1.6.22 Create `frontend/types/index.ts`
-- [ ] 1.6.23 Create `frontend/.env.example`
+- [x] 1.6.1 Create `frontend/` directory
+- [x] 1.6.2 Initialize Next.js 14: `npx create-next-app@latest frontend --app --tailwind --typescript`
+- [x] 1.6.3 Create `frontend/app/layout.tsx` (root layout)
+- [x] 1.6.4 Create `frontend/app/page.tsx` (landing page)
+- [x] 1.6.5 Create `frontend/app/(auth)/login/page.tsx`
+- [x] 1.6.6 Create `frontend/app/(auth)/register/page.tsx`
+- [x] 1.6.7 Create `frontend/app/problems/page.tsx`
+- [x] 1.6.8 Create `frontend/app/problems/[slug]/page.tsx`
+- [x] 1.6.9 Create `frontend/app/contests/page.tsx`
+- [x] 1.6.10 Create `frontend/app/contests/[id]/page.tsx`
+- [x] 1.6.11 Create `frontend/app/contests/[id]/leaderboard/page.tsx`
+- [x] 1.6.12 Create `frontend/app/profile/[username]/page.tsx`
+- [x] 1.6.13 Create `frontend/components/Editor/MonacoEditor.tsx`
+- [x] 1.6.14 Create `frontend/components/Editor/SubmitButton.tsx`
+- [x] 1.6.15 Create `frontend/components/Leaderboard/LeaderboardTable.tsx`
+- [x] 1.6.16 Create `frontend/components/Problem/ProblemCard.tsx`
+- [x] 1.6.17 Create `frontend/components/Problem/ProblemStatement.tsx`
+- [x] 1.6.18 Create `frontend/components/ui/` (Button.tsx, Badge.tsx, Navbar.tsx)
+- [x] 1.6.19 Create `frontend/hooks/` (useSocket.ts, useAuth.ts, useSubmission.ts)
+- [x] 1.6.20 Create `frontend/lib/` (api.ts, aiApi.ts, socket.ts)
+- [x] 1.6.21 Create `frontend/store/auth.store.ts` (Zustand)
+- [x] 1.6.22 Create `frontend/types/index.ts`
+- [x] 1.6.23 Create `frontend/.env.example`
 
 ### 1.7 Frontend Dependencies — P3
-- [ ] 1.7.1 Install state: `npm install zustand`
-- [ ] 1.7.2 Install HTTP: `npm install axios`
-- [ ] 1.7.3 Install Socket.io client: `npm install socket.io-client`
-- [ ] 1.7.4 Install Monaco Editor: `npm install @monaco-editor/react`
-- [ ] 1.7.5 Install markdown: `npm install react-markdown`
-- [ ] 1.7.6 Install UI: `npm install clsx tailwind-merge`
+- [x] 1.7.1 Install state: `npm install zustand`
+- [x] 1.7.2 Install HTTP: `npm install axios`
+- [x] 1.7.3 Install Socket.io client: `npm install socket.io-client`
+- [x] 1.7.4 Install Monaco Editor: `npm install @monaco-editor/react`
+- [x] 1.7.5 Install markdown: `npm install react-markdown`
+- [x] 1.7.6 Install UI: `npm install clsx tailwind-merge`
 
 ### 1.8 Terraform Folder Structure — P1
-- [ ] 1.8.1 Create `terraform/` directory
-- [ ] 1.8.2 Create `terraform/main.tf` (provider config)
-- [ ] 1.8.3 Create `terraform/variables.tf`
-- [ ] 1.8.4 Create `terraform/outputs.tf`
-- [ ] 1.8.5 Create `terraform/terraform.tfvars.example`
-- [ ] 1.8.6 Create `terraform/modules/s3/main.tf`
-- [ ] 1.8.7 Create `terraform/modules/s3/variables.tf`
-- [ ] 1.8.8 Create `terraform/modules/atlas/main.tf`
-- [ ] 1.8.9 Create `terraform/modules/atlas/variables.tf`
-- [ ] 1.8.10 Create `terraform/modules/oke/main.tf`
-- [ ] 1.8.11 Create `terraform/modules/oke/variables.tf`
+- [x] 1.8.1 Create `terraform/` directory
+- [x] 1.8.2 Create `terraform/main.tf` (provider config)
+- [x] 1.8.3 Create `terraform/variables.tf`
+- [x] 1.8.4 Create `terraform/outputs.tf`
+- [x] 1.8.5 Create `terraform/terraform.tfvars.example`
+- [x] 1.8.6 Create `terraform/modules/s3/main.tf`
+- [x] 1.8.7 Create `terraform/modules/s3/variables.tf`
+- [x] 1.8.8 Create `terraform/modules/atlas/main.tf`
+- [x] 1.8.9 Create `terraform/modules/atlas/variables.tf`
+- [x] 1.8.10 Create `terraform/modules/oke/main.tf`
+- [x] 1.8.11 Create `terraform/modules/oke/variables.tf`
 
 ### 1.9 Scripts & CI/CD Structure — P4
-- [ ] 1.9.1 Create `scripts/generate-status.js` (PROJECT_STATUS.md generator)
-- [ ] 1.9.2 Create `scripts/seed.js` (MongoDB seed data)
-- [ ] 1.9.3 Create `.github/workflows/ci.yml`
-- [ ] 1.9.4 Create `.github/workflows/deploy.yml`
-- [ ] 1.9.5 Create `.github/PULL_REQUEST_TEMPLATE.md`
+- [x] 1.9.1 Create `scripts/generate-status.js` (PROJECT_STATUS.md generator)
+- [x] 1.9.2 Create `scripts/seed.js` (MongoDB seed data)
+- [x] 1.9.3 Create `.github/workflows/ci.yml`
+- [x] 1.9.4 Create `.github/workflows/deploy.yml`
+- [x] 1.9.5 Create `.github/PULL_REQUEST_TEMPLATE.md`
 
 ### 1.10 Docker Compose Files — P2
-- [ ] 1.10.1 Create `docker-compose.yml` (api, ai-service, mongo, redis services)
-- [ ] 1.10.2 Create `docker-compose.prod.yml` (production overrides)
-- [ ] 1.10.3 Create `backend/.dockerignore`
-- [ ] 1.10.4 Create `ai-service/.dockerignore`
+- [x] 1.10.1 Create `docker-compose.yml` (api, ai-service, mongo, redis services)
+- [x] 1.10.2 Create `docker-compose.prod.yml` (production overrides)
+- [x] 1.10.3 Create `backend/.dockerignore`
+- [x] 1.10.4 Create `ai-service/.dockerignore`
 
 ### 1.11 PROJECT_STATUS.md Setup — P4
-- [ ] 1.11.1 Create initial `PROJECT_STATUS.md` template
-- [ ] 1.11.2 Configure `.git/hooks/pre-push` to run `node scripts/generate-status.js`
+- [x] 1.11.1 Create initial `PROJECT_STATUS.md` template
+- [x] 1.11.2 Configure `.git/hooks/pre-push` to run `node scripts/generate-status.js`
 
 ---
 

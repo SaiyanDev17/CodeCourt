@@ -1,0 +1,29 @@
+# NGINX Ingress for external traffic
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: codecourt-ingress
+  namespace: codecourt
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/websocket-services: "api-service"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api.codecourt.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 5000
+  tls:
+  - hosts:
+    - api.codecourt.example.com
+    secretName: codecourt-tls

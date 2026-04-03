@@ -1,0 +1,18 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# LangChain and Groq
+langchain==0.1.6
+langchain-groq==0.0.1
+
+# HTTP client
+httpx==0.26.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Development dependencies
+pytest==7.4.4
+ruff==0.1.14
+black==24.1.1

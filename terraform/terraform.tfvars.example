@@ -1,0 +1,19 @@
+# Example Terraform variables
+# Copy this file to terraform.tfvars and fill in your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+s3_bucket_name = "codecourt-test-cases"
+
+# MongoDB Atlas Configuration
+atlas_project_id = "your-atlas-project-id"
+atlas_cluster_name = "codecourt-cluster"
+atlas_region = "US_EAST_1"
+
+# Oracle Cloud Configuration
+oci_compartment_id = "your-oci-compartment-id"
+oke_cluster_name = "codecourt-oke"
+oke_node_count = 2
+
+# Environment
+environment = "production"

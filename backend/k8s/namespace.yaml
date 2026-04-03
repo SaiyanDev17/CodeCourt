@@ -1,0 +1,8 @@
+# Kubernetes namespace for CodeCourt
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: codecourt
+  labels:
+    name: codecourt
+    app: codecourt

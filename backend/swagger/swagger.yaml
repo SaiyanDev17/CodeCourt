@@ -1,0 +1,275 @@
+openapi: 3.0.0
+info:
+  title: CodeCourt API
+  description: Competitive programming platform API
+  version: 1.0.0
+  contact:
+    name: CodeCourt Team
+servers:
+  - url: http://localhost:5000
+    description: Local development
+  - url: https://api.codecourt.example.com
+    description: Production
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, problem_setter, contestant]
+        createdAt:
+          type: string
+          format: date-time
+    
+    Problem:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        timeLimit:
+          type: integer
+        memoryLimit:
+          type: integer
+        status:
+          type: string
+          enum: [draft, published, rejected]
+    
+    Submission:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          type: string
+        problemId:
+          type: string
+        language:
+          type: string
+          enum: [cpp, python]
+        verdict:
+          type: string
+          enum: [AC, WA, TLE, MLE, RE, CE, PENDING]
+        executionTime:
+          type: integer
+        memoryUsed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    
+    Contest:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, ongoing, ended]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        problemIds:
+          type: array
+          items:
+            type: string
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+  
+  /api/auth/register:
+    post:
+      summary: Register new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: User created successfully
+        '409':
+          description: Email or username already exists
+  
+  /api/auth/login:
+    post:
+      summary: Login user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        '401':
+          description: Invalid credentials
+  
+  /api/problems:
+    get:
+      summary: List published problems
+      tags: [Problems]
+      responses:
+        '200':
+          description: List of problems
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+    
+    post:
+      summary: Create new problem
+      tags: [Problems]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Problem'
+      responses:
+        '201':
+          description: Problem created
+        '403':
+          description: Forbidden
+  
+  /api/submissions:
+    post:
+      summary: Submit code
+      tags: [Submissions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [problemId, language, code]
+              properties:
+                problemId:
+                  type: string
+                contestId:
+                  type: string
+                language:
+                  type: string
+                  enum: [cpp, python]
+                code:
+                  type: string
+      responses:
+        '202':
+          description: Submission accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissionId:
+                    type: string
+  
+  /api/contests:
+    get:
+      summary: List all contests
+      tags: [Contests]
+      responses:
+        '200':
+          description: List of contests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contest'
+  
+  /api/agent/hint:
+    post:
+      summary: Request AI hint
+      tags: [Agent]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [problem_id, problem_slug]
+              properties:
+                problem_id:
+                  type: string
+                problem_slug:
+                  type: string
+      responses:
+        '200':
+          description: Hint generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hint:
+                    type: string
+                  hints_used:
+                    type: integer
+        '403':
+          description: Maximum hints reached
