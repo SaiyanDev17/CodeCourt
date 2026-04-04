@@ -90,13 +90,13 @@
 
 ### 1.5 AI Service Dependencies — P4
 - [x] 1.5.1 Create `ai-service/requirements.txt`
-- [ ] 1.5.2 Create Python venv: `python -m venv venv && source venv/bin/activate`
-- [ ] 1.5.3 Install FastAPI: `pip install fastapi uvicorn[standard]`
-- [ ] 1.5.4 Install LangChain: `pip install langchain langchain-groq`
-- [ ] 1.5.5 Install HTTP client: `pip install httpx`
-- [ ] 1.5.6 Install env: `pip install python-dotenv`
-- [ ] 1.5.7 Install dev deps: `pip install pytest ruff black`
-- [ ] 1.5.8 Freeze deps: `pip freeze > requirements.txt`
+- [x] 1.5.2 Create Python venv: `python -m venv venv && source venv/bin/activate`
+- [x] 1.5.3 Install FastAPI: `pip install fastapi uvicorn[standard]`
+- [x] 1.5.4 Install LangChain: `pip install langchain langchain-groq`
+- [x] 1.5.5 Install HTTP client: `pip install httpx`
+- [x] 1.5.6 Install env: `pip install python-dotenv`
+- [x] 1.5.7 Install dev deps: `pip install pytest ruff black`
+- [x] 1.5.8 Freeze deps: `pip freeze > requirements.txt`
 
 ### 1.6 Frontend Folder Structure — P3
 - [x] 1.6.1 Create `frontend/` directory
@@ -248,21 +248,21 @@
 ## PHASE 3: AI Service Implementation (Week 3)
 
 ### 3.1 FastAPI Setup — P4
-- [ ] 3.1.1 Implement `app/main.py` — FastAPI init, CORS middleware (allow localhost:3000)
-- [ ] 3.1.2 Implement `app/config.py` — load env vars (GROQ_API_KEY, EXPRESS_API_URL, PORT)
-- [ ] 3.1.3 Implement `app/models/schemas.py` — Pydantic models (HintRequest, HintResponse)
+- [x] 3.1.1 Implement `app/main.py` — FastAPI init, CORS middleware (allow localhost:3000)
+- [x] 3.1.2 Implement `app/config.py` — load env vars (GROQ_API_KEY, EXPRESS_API_URL, PORT)
+- [x] 3.1.3 Implement `app/models/schemas.py` — Pydantic models (HintRequest, HintResponse)
 
 ### 3.2 LangChain Agent Implementation — P4
-- [ ] 3.2.1 Implement `app/agent/tools.py` — define 4 tools: get_hint_count, get_submission_history, get_problem_metadata, save_hint (each calls Express API via httpx)
-- [ ] 3.2.2 Implement `app/agent/prompts.py` — system prompt (give hints without full solution)
-- [ ] 3.2.3 Implement `app/agent/executor.py` — LangChain AgentExecutor with Groq (Llama 3.3 70B), tool-calling loop
-- [ ] 3.2.4 Implement `app/routers/hint.py` — POST /hint endpoint, validate request, run agent, return hint + hints_used
+- [x] 3.2.1 Implement `app/agent/tools.py` — define 4 tools: get_hint_count, get_submission_history, get_problem_metadata, save_hint (each calls Express API via httpx)
+- [x] 3.2.2 Implement `app/agent/prompts.py` — system prompt (give hints without full solution)
+- [x] 3.2.3 Implement `app/agent/executor.py` — LangChain AgentExecutor with Groq (Llama 3.3 70B), tool-calling loop
+- [x] 3.2.4 Implement `app/routers/hint.py` — POST /hint endpoint, validate request, run agent, return hint + hints_used
 
 ### 3.3 Express Proxy Endpoints — P1
-- [ ] 3.3.1 Implement `POST /api/agent/hint` — proxy to FastAPI /hint
-- [ ] 3.3.2 Implement `GET /api/agent/hint-count` — return hint count for (user, problem)
-- [ ] 3.3.3 Implement `POST /api/agent/save-hint` — persist hint, increment count
-- [ ] 3.3.4 Create `Hint` Mongoose model (userId, problemId, hintText, hintIndex, createdAt)
+- [x] 3.3.1 Implement `POST /api/agent/hint` — proxy to FastAPI /hint
+- [x] 3.3.2 Implement `GET /api/agent/hint-count` — return hint count for (user, problem)
+- [x] 3.3.3 Implement `POST /api/agent/save-hint` — persist hint, increment count
+- [x] 3.3.4 Create `Hint` Mongoose model (userId, problemId, hintText, hintIndex, createdAt)
 
 ### 3.4 AI Service Testing — P4
 - [ ] 3.4.1 Write unit tests for hint count enforcement (max 3)
@@ -275,50 +275,50 @@
 ## PHASE 4: Frontend Implementation (Week 4)
 
 ### 4.1 Core Frontend Setup — P3 + P4
-- [ ] 4.1.1 Implement `store/auth.store.ts` — Zustand store (accessToken, user, login, logout, refresh) — **P4**
-- [ ] 4.1.2 Implement `lib/api.ts` — Axios instance (Express :5000), auto-attach Bearer, auto-refresh on 401 — **P4**
-- [ ] 4.1.3 Implement `lib/aiApi.ts` — Axios instance (FastAPI :8000) — **P4**
-- [ ] 4.1.4 Implement `lib/socket.ts` — Socket.io client, connect with auth token — **P3**
-- [ ] 4.1.5 Implement `types/index.ts` — TypeScript types (User, Problem, Submission, Contest, etc.) — **P4**
+- [x] 4.1.1 Implement `store/auth.store.ts` — Zustand store (accessToken, user, login, logout, refresh) — **P4**
+- [x] 4.1.2 Implement `lib/api.ts` — Axios instance (Express :5000), auto-attach Bearer, auto-refresh on 401 — **P4**
+- [x] 4.1.3 Implement `lib/aiApi.ts` — Axios instance (FastAPI :8000) — **P4**
+- [x] 4.1.4 Implement `lib/socket.ts` — Socket.io client, connect with auth token — **P3**
+- [x] 4.1.5 Implement `types/index.ts` — TypeScript types (User, Problem, Submission, Contest, etc.) — **P4**
 
 ### 4.2 Auth Pages — P3
-- [ ] 4.2.1 Implement `app/(auth)/login/page.tsx` — form validation, call POST /api/auth/login, store token
-- [ ] 4.2.2 Implement `app/(auth)/register/page.tsx` — form validation, call POST /api/auth/register
-- [ ] 4.2.3 Implement protected route redirect — unauthenticated → /login
+- [x] 4.2.1 Implement `app/(auth)/login/page.tsx` — form validation, call POST /api/auth/login, store token
+- [x] 4.2.2 Implement `app/(auth)/register/page.tsx` — form validation, call POST /api/auth/register
+- [x] 4.2.3 Implement protected route redirect — unauthenticated → /login
 
 ### 4.3 Problem Pages — P3
-- [ ] 4.3.1 Implement `app/problems/page.tsx` — fetch problem list, display with difficulty badges
-- [ ] 4.3.2 Implement `components/Problem/ProblemCard.tsx` — problem card component
-- [ ] 4.3.3 Implement `app/problems/[slug]/page.tsx` — problem detail + Monaco Editor + submit button
-- [ ] 4.3.4 Implement `components/Problem/ProblemStatement.tsx` — markdown renderer
-- [ ] 4.3.5 Implement `components/Editor/MonacoEditor.tsx` — Monaco wrapper with language select (C++, Python)
-- [ ] 4.3.6 Implement `components/Editor/SubmitButton.tsx` — submit code, show "Judging..." state
-- [ ] 4.3.7 Implement `hooks/useSubmission.ts` — submit code, listen for verdict Socket.io event, update UI
+- [x] 4.3.1 Implement `app/problems/page.tsx` — fetch problem list, display with difficulty badges
+- [x] 4.3.2 Implement `components/Problem/ProblemCard.tsx` — problem card component
+- [x] 4.3.3 Implement `app/problems/[slug]/page.tsx` — problem detail + Monaco Editor + submit button
+- [x] 4.3.4 Implement `components/Problem/ProblemStatement.tsx` — markdown renderer
+- [x] 4.3.5 Implement `components/Editor/MonacoEditor.tsx` — Monaco wrapper with language select (C++, Python)
+- [x] 4.3.6 Implement `components/Editor/SubmitButton.tsx` — submit code, show "Judging..." state
+- [x] 4.3.7 Implement `hooks/useSubmission.ts` — submit code, listen for verdict Socket.io event, update UI
 
 ### 4.4 Contest Pages — P3
-- [ ] 4.4.1 Implement `app/contests/page.tsx` — contest list with status badges
-- [ ] 4.4.2 Implement `app/contests/[id]/page.tsx` — contest detail + problem list + register button
-- [ ] 4.4.3 Implement `app/contests/[id]/leaderboard/page.tsx` — real-time leaderboard table
-- [ ] 4.4.4 Implement `components/Leaderboard/LeaderboardTable.tsx` — listen for leaderboard:update Socket.io event
+- [x] 4.4.1 Implement `app/contests/page.tsx` — contest list with status badges
+- [x] 4.4.2 Implement `app/contests/[id]/page.tsx` — contest detail + problem list + register button
+- [x] 4.4.3 Implement `app/contests/[id]/leaderboard/page.tsx` — real-time leaderboard table
+- [x] 4.4.4 Implement `components/Leaderboard/LeaderboardTable.tsx` — listen for leaderboard:update Socket.io event
 
 ### 4.5 User Profile — P3
-- [ ] 4.5.1 Implement `app/profile/[username]/page.tsx` — user stats, submission history
+- [x] 4.5.1 Implement `app/profile/[username]/page.tsx` — user stats, submission history
 
 ### 4.6 AI Hint Panel — P4
-- [ ] 4.6.1 Implement AI hint panel in `app/problems/[slug]/page.tsx` — call POST /api/agent/hint
-- [ ] 4.6.2 Display hint text + hints remaining counter
+- [x] 4.6.1 Implement AI hint panel in `app/problems/[slug]/page.tsx` — call POST /api/agent/hint
+- [x] 4.6.2 Display hint text + hints remaining counter
 
 ### 4.7 UI Components — P3
-- [ ] 4.7.1 Implement `components/ui/Button.tsx` — reusable button component
-- [ ] 4.7.2 Implement `components/ui/Badge.tsx` — verdict badges (AC=green, WA=red, etc.)
-- [ ] 4.7.3 Implement `components/ui/Navbar.tsx` — navigation with auth state
+- [x] 4.7.1 Implement `components/ui/Button.tsx` — reusable button component
+- [x] 4.7.2 Implement `components/ui/Badge.tsx` — verdict badges (AC=green, WA=red, etc.)
+- [x] 4.7.3 Implement `components/ui/Navbar.tsx` — navigation with auth state
 
 ### 4.8 Hooks — P3
-- [ ] 4.8.1 Implement `hooks/useAuth.ts` — auth state + token refresh logic
-- [ ] 4.8.2 Implement `hooks/useSocket.ts` — Socket.io connection hook
+- [x] 4.8.1 Implement `hooks/useAuth.ts` — auth state + token refresh logic
+- [x] 4.8.2 Implement `hooks/useSocket.ts` — Socket.io connection hook
 
 ### 4.9 Frontend Testing — P3
-- [ ] 4.9.1 Test frontend locally: `npm run dev` → verify all pages render
+- [x] 4.9.1 Test frontend locally: `npm run dev` → verify all pages render
 - [ ] 4.9.2 Test end-to-end flow: register → login → browse problems → submit code → see verdict
 
 ---
