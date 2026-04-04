@@ -45,4 +45,17 @@ mongoose.connection.on('reconnected', () => {
   console.log('✓ MongoDB reconnected');
 });
 
-module.exports = { connectDB };
+/**
+ * Close MongoDB connection
+ * @returns {Promise<void>}
+ */
+const closeDB = async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('✓ MongoDB connection closed');
+  } catch (error) {
+    console.error('✗ Error closing MongoDB connection:', error.message);
+  }
+};
+
+module.exports = { connectDB, closeDB };

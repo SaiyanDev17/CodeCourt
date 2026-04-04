@@ -326,28 +326,28 @@
 ## PHASE 5: Redis Caching Integration (Week 4)
 
 ### 5.1 Cache Integration — P4
-- [ ] 5.1.1 Integrate `problems:list` cache in Problem_Service (TTL 60s, invalidate on approve/update)
-- [ ] 5.1.2 Integrate `user:profile:{userId}` cache in Users module (TTL 300s, invalidate on role change)
-- [ ] 5.1.3 Integrate `leaderboard:{contestId}` cache in Contest_Service (TTL 10s, invalidate on new AC)
-- [ ] 5.1.4 Implement Redis unavailability fallback — catch errors, log warning, fall through to MongoDB
+- [x] 5.1.1 Integrate `problems:list` cache in Problem_Service (TTL 60s, invalidate on approve/update)
+- [x] 5.1.2 Integrate `user:profile:{userId}` cache in Users module (TTL 300s, invalidate on role change)
+- [x] 5.1.3 Integrate `leaderboard:{contestId}` cache in Contest_Service (TTL 10s, invalidate on new AC)
+- [x] 5.1.4 Implement Redis unavailability fallback — catch errors, log warning, fall through to MongoDB
 
 ---
 
 ## PHASE 6: Documentation & Tooling (Week 5)
 
 ### 6.1 Swagger Documentation — P1
-- [ ] 6.1.1 Write `swagger/swagger.yaml` — document all endpoints (auth, problems, submissions, contests, users, agent) with schemas
-- [ ] 6.1.2 Mount Swagger UI at `GET /api-docs` using swagger-ui-express
-- [ ] 6.1.3 Test Swagger UI — verify all endpoints documented
+- [x] 6.1.1 Write `swagger/swagger.yaml` — document all endpoints (auth, problems, submissions, contests, users, agent) with schemas
+- [x] 6.1.2 Mount Swagger UI at `GET /api-docs` using swagger-ui-express
+- [x] 6.1.3 Test Swagger UI — verify all endpoints documented
 
 ### 6.2 Seed Data Script — P1
-- [ ] 6.2.1 Implement `scripts/seed.js` — seed MongoDB with sample users (admin, problem_setter, contestant), 10 problems, 1 contest
-- [ ] 6.2.2 Test seed script: `node scripts/seed.js` → verify data in MongoDB Compass
+- [x] 6.2.1 Implement `scripts/seed.js` — seed MongoDB with sample users (admin, problem_setter, contestant), 10 problems, 1 contest
+- [x] 6.2.2 Test seed script: `node scripts/seed.js` → verify data in MongoDB Compass
 
 ### 6.3 PROJECT_STATUS.md Generator — P4
-- [ ] 6.3.1 Implement `scripts/generate-status.js` — parse tasks.md, scan route files, generate PROJECT_STATUS.md with API health map, module status, completion %
-- [ ] 6.3.2 Test generator: `node scripts/generate-status.js` → verify PROJECT_STATUS.md created
-- [ ] 6.3.3 Configure pre-push hook: `.git/hooks/pre-push` → run generator, stage file
+- [x] 6.3.1 Implement `scripts/generate-status.js` — parse tasks.md, scan route files, generate PROJECT_STATUS.md with API health map, module status, completion %
+- [x] 6.3.2 Test generator: `node scripts/generate-status.js` → verify PROJECT_STATUS.md created
+- [x] 6.3.3 Configure pre-push hook: `.git/hooks/pre-push` → run generator, stage file
 
 ---
 

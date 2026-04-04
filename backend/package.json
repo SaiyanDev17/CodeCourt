@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "jest --coverage",
+    "test": "jest --coverage --testPathIgnorePatterns=integration.test.js",
+    "test:unit": "jest --testPathIgnorePatterns=integration.test.js",
+    "test:integration": "jest --testPathPatterns=integration.test.js --runInBand",
+    "test:all": "jest --coverage",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix"
   },

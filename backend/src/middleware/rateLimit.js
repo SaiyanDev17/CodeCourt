@@ -1,6 +1,6 @@
 // Rate limiting middleware using Redis
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
+const { RedisStore } = require('rate-limit-redis');
 const redis = require('../config/redis');
 
 /**
@@ -8,7 +8,7 @@ const redis = require('../config/redis');
  */
 exports.loginRateLimiter = rateLimit({
   store: new RedisStore({
-    client: redis,
+    sendCommand: (...args) => redis.call(...args),
     prefix: 'rl:login:'
   }),
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -26,7 +26,7 @@ exports.loginRateLimiter = rateLimit({
  */
 exports.apiRateLimiter = rateLimit({
   store: new RedisStore({
-    client: redis,
+    sendCommand: (...args) => redis.call(...args),
     prefix: 'rl:api:'
   }),
   windowMs: 60 * 1000, // 1 minute

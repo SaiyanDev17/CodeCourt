@@ -1,10 +1,11 @@
 openapi: 3.0.0
 info:
   title: CodeCourt API
-  description: Competitive programming platform API
+  description: Competitive programming platform API with authentication, problems, submissions, contests, and AI hints
   version: 1.0.0
   contact:
     name: CodeCourt Team
+
 servers:
   - url: http://localhost:5000
     description: Local development
@@ -17,6 +18,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: JWT token obtained from /api/auth/login or /api/auth/refresh
   
   schemas:
     User:
@@ -24,14 +26,22 @@ components:
       properties:
         _id:
           type: string
+          description: MongoDB ObjectId
         username:
           type: string
+          minLength: 3
+          maxLength: 30
         email:
           type: string
+          format: email
         role:
           type: string
           enum: [admin, problem_setter, contestant]
+          default: contestant
         createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
     
@@ -40,43 +50,103 @@ components:
       properties:
         _id:
           type: string
+          description: MongoDB ObjectId
         title:
           type: string
+          minLength: 3
+          maxLength: 200
         slug:
           type: string
+          pattern: ^[a-z0-9-]+$
+          description: URL-friendly identifier
         description:
           type: string
+          description: Problem statement in markdown
+        constraints:
+          type: string
+          description: Input/output constraints
         difficulty:
           type: string
           enum: [easy, medium, hard]
         timeLimit:
           type: integer
+          minimum: 100
+          maximum: 10000
+          description: Time limit in milliseconds
         memoryLimit:
           type: integer
+          minimum: 16
+          maximum: 512
+          description: Memory limit in MB
         status:
           type: string
           enum: [draft, published, rejected]
+          default: draft
+        sampleTestCases:
+          type: array
+          items:
+            type: object
+            properties:
+              input:
+                type: string
+              output:
+                type: string
+        testCasesUrl:
+          type: string
+          description: S3 URL for hidden test cases ZIP
+        createdBy:
+          type: string
+          description: User ID of problem setter
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     
     Submission:
       type: object
       properties:
         _id:
           type: string
+          description: MongoDB ObjectId
         userId:
           type: string
+          description: User ID who submitted
         problemId:
           type: string
+          description: Problem ID
+        contestId:
+          type: string
+          nullable: true
+          description: Contest ID if submitted during contest
         language:
           type: string
           enum: [cpp, python]
+        code:
+          type: string
+          maxLength: 50000
         verdict:
           type: string
           enum: [AC, WA, TLE, MLE, RE, CE, PENDING]
+          default: PENDING
+          description: AC=Accepted, WA=Wrong Answer, TLE=Time Limit Exceeded, MLE=Memory Limit Exceeded, RE=Runtime Error, CE=Compilation Error
         executionTime:
           type: integer
+          nullable: true
+          description: Execution time in milliseconds
         memoryUsed:
           type: integer
+          nullable: true
+          description: Memory used in MB
+        compilerError:
+          type: string
+          nullable: true
+          description: Compilation error message if CE
         createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
     
@@ -85,11 +155,15 @@ components:
       properties:
         _id:
           type: string
+          description: MongoDB ObjectId
         title:
           type: string
+          minLength: 3
+          maxLength: 200
         status:
           type: string
           enum: [upcoming, ongoing, ended]
+          description: Auto-computed based on current time
         startTime:
           type: string
           format: date-time
@@ -100,18 +174,82 @@ components:
           type: array
           items:
             type: string
+          minItems: 1
+          description: Array of Problem IDs
+        participants:
+          type: array
+          items:
+            type: string
+          description: Array of User IDs who registered
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    Hint:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        userId:
+          type: string
+          description: User ID who requested hint
+        problemId:
+          type: string
+          description: Problem ID
+        hintText:
+          type: string
+          description: AI-generated hint text
+        hintIndex:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: Hint number (1-3)
+        createdAt:
+          type: string
+          format: date-time
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
 
 paths:
   /health:
     get:
-      summary: Health check
+      summary: Health check endpoint
+      description: Check if the API service is running
+      tags: [System]
       responses:
         '200':
           description: Service is healthy
-  
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
   /api/auth/register:
     post:
       summary: Register new user
+      description: Create a new user account with contestant role by default
       tags: [Auth]
       requestBody:
         required: true
@@ -123,19 +261,48 @@ paths:
               properties:
                 username:
                   type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: ^[a-zA-Z0-9]+$
+                  example: johndoe
                 email:
                   type: string
+                  format: email
+                  example: john@example.com
                 password:
                   type: string
+                  minLength: 8
+                  example: SecurePass123
       responses:
         '201':
           description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered successfully
+                  userId:
+                    type: string
         '409':
           description: Email or username already exists
-  
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/auth/login:
     post:
       summary: Login user
+      description: Authenticate user and receive JWT access token and refresh token (httpOnly cookie)
       tags: [Auth]
       requestBody:
         required: true
@@ -147,8 +314,11 @@ paths:
               properties:
                 email:
                   type: string
+                  format: email
+                  example: john@example.com
                 password:
                   type: string
+                  example: SecurePass123
       responses:
         '200':
           description: Login successful
@@ -159,16 +329,78 @@ paths:
                 properties:
                   accessToken:
                     type: string
+                    description: JWT access token (15min expiry)
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
         '401':
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Get new access token using refresh token from httpOnly cookie
+      tags: [Auth]
+      responses:
+        '200':
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      description: Clear refresh token cookie
+      tags: [Auth]
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
   /api/problems:
     get:
       summary: List published problems
+      description: Get all published problems (cached for 5 minutes)
       tags: [Problems]
       responses:
         '200':
-          description: List of problems
+          description: List of published problems
           content:
             application/json:
               schema:
@@ -178,6 +410,7 @@ paths:
     
     post:
       summary: Create new problem
+      description: Create a new problem in draft status (admin or problem_setter only)
       tags: [Problems]
       security:
         - bearerAuth: []
@@ -186,16 +419,292 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Problem'
+              type: object
+              required: [title, slug, description, constraints, timeLimit, memoryLimit, difficulty, sampleTestCases]
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 200
+                  example: Two Sum
+                slug:
+                  type: string
+                  pattern: ^[a-z0-9-]+$
+                  example: two-sum
+                description:
+                  type: string
+                  example: Given an array of integers, return indices of two numbers that add up to target
+                constraints:
+                  type: string
+                  example: 2 <= nums.length <= 10^4
+                timeLimit:
+                  type: integer
+                  minimum: 100
+                  maximum: 10000
+                  example: 1000
+                memoryLimit:
+                  type: integer
+                  minimum: 16
+                  maximum: 512
+                  example: 256
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                  example: easy
+                sampleTestCases:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      input:
+                        type: string
+                      output:
+                        type: string
       responses:
         '201':
-          description: Problem created
+          description: Problem created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '403':
-          description: Forbidden
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   
+  /api/problems/{slug}:
+    get:
+      summary: Get problem by slug
+      description: Get detailed problem information by slug
+      tags: [Problems]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: two-sum
+      responses:
+        '200':
+          description: Problem details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Problem not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/problems/{id}:
+    put:
+      summary: Update problem
+      description: Update problem details (problem_setter owner or admin only)
+      tags: [Problems]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                constraints:
+                  type: string
+                timeLimit:
+                  type: integer
+                memoryLimit:
+                  type: integer
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                sampleTestCases:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      input:
+                        type: string
+                      output:
+                        type: string
+      responses:
+        '200':
+          description: Problem updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden - not owner or admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Problem not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/problems/{id}/upload-tests:
+    post:
+      summary: Upload test cases
+      description: Upload hidden test cases ZIP file to S3 (problem_setter owner or admin only)
+      tags: [Problems]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [testCases]
+              properties:
+                testCases:
+                  type: string
+                  format: binary
+                  description: ZIP file containing input/output test files (max 10MB)
+      responses:
+        '200':
+          description: Test cases uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  testCasesUrl:
+                    type: string
+        '400':
+          description: Invalid file or missing file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not owner or admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/problems/{id}/approve:
+    post:
+      summary: Approve problem
+      description: Approve problem and change status to published (admin only)
+      tags: [Problems]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+      responses:
+        '200':
+          description: Problem approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  problem:
+                    $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden - admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Problem not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/problems/{id}/reject:
+    post:
+      summary: Reject problem
+      description: Reject problem with reason (admin only)
+      tags: [Problems]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Problem description is unclear
+      responses:
+        '200':
+          description: Problem rejected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  problem:
+                    $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden - admin only
+        '404':
+          description: Problem not found
+
   /api/submissions:
     post:
       summary: Submit code
+      description: Submit code for a problem and enqueue for judging
       tags: [Submissions]
       security:
         - bearerAuth: []
@@ -209,27 +718,126 @@ paths:
               properties:
                 problemId:
                   type: string
+                  pattern: ^[0-9a-fA-F]{24}$
+                  description: MongoDB ObjectId of the problem
                 contestId:
                   type: string
+                  pattern: ^[0-9a-fA-F]{24}$
+                  description: Optional contest ID if submitting during contest
                 language:
                   type: string
                   enum: [cpp, python]
+                  example: cpp
                 code:
                   type: string
+                  minLength: 1
+                  maxLength: 50000
+                  example: |
+                    #include <iostream>
+                    int main() {
+                      std::cout << "Hello World";
+                      return 0;
+                    }
       responses:
         '202':
-          description: Submission accepted
+          description: Submission accepted and queued for judging
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Submission queued
                   submissionId:
                     type: string
+        '400':
+          description: Invalid problem or contest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/submissions/{id}:
+    get:
+      summary: Get submission details
+      description: Get submission details including verdict (owner only)
+      tags: [Submissions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Submission MongoDB ObjectId
+      responses:
+        '200':
+          description: Submission details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+        '403':
+          description: Forbidden - not submission owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   
+  /api/submissions/problem/{problemId}:
+    get:
+      summary: List submissions for a problem
+      description: Get all own submissions for a specific problem
+      tags: [Submissions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+      responses:
+        '200':
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Submission'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/contests:
     get:
       summary: List all contests
+      description: Get all contests with computed status (upcoming, ongoing, ended)
       tags: [Contests]
       responses:
         '200':
@@ -240,10 +848,262 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Contest'
+    
+    post:
+      summary: Create new contest
+      description: Create a new contest (admin or problem_setter only)
+      tags: [Contests]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, startTime, endTime, problemIds]
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 200
+                  example: Weekly Contest #1
+                startTime:
+                  type: string
+                  format: date-time
+                  example: 2024-01-15T10:00:00Z
+                endTime:
+                  type: string
+                  format: date-time
+                  example: 2024-01-15T12:00:00Z
+                problemIds:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    pattern: ^[0-9a-fA-F]{24}$
+                  example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+      responses:
+        '201':
+          description: Contest created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contest'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/contests/{id}:
+    get:
+      summary: Get contest details
+      description: Get detailed contest information including problems
+      tags: [Contests]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Contest MongoDB ObjectId
+      responses:
+        '200':
+          description: Contest details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contest'
+        '404':
+          description: Contest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   
+  /api/contests/{id}/register:
+    post:
+      summary: Register for contest
+      description: Register authenticated user for a contest
+      tags: [Contests]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Contest MongoDB ObjectId
+      responses:
+        '200':
+          description: Successfully registered for contest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Registered successfully
+        '400':
+          description: Already registered or contest has ended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Contest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/contests/{id}/leaderboard:
+    get:
+      summary: Get contest leaderboard
+      description: Get contest leaderboard with participant scores (cached for 1 minute)
+      tags: [Contests]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Contest MongoDB ObjectId
+      responses:
+        '200':
+          description: Contest leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                    username:
+                      type: string
+                    score:
+                      type: integer
+                      description: Number of problems solved
+                    totalTime:
+                      type: integer
+                      description: Total time in minutes
+        '404':
+          description: Contest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{username}:
+    get:
+      summary: Get user profile
+      description: Get public user profile by username (cached for 5 minutes)
+      tags: [Users]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          example: johndoe
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  role:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  solvedProblems:
+                    type: integer
+                    description: Number of problems solved
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/users/{id}/role:
+    put:
+      summary: Update user role
+      description: Update user role (admin only)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User MongoDB ObjectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, problem_setter, contestant]
+                  example: problem_setter
+      responses:
+        '200':
+          description: User role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden - admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/agent/hint:
     post:
       summary: Request AI hint
+      description: Request an AI-generated hint for a problem (contestant only, max 3 hints per problem)
       tags: [Agent]
       security:
         - bearerAuth: []
@@ -257,11 +1117,15 @@ paths:
               properties:
                 problem_id:
                   type: string
+                  description: Problem MongoDB ObjectId
+                  example: 507f1f77bcf86cd799439011
                 problem_slug:
                   type: string
+                  description: Problem slug for context
+                  example: two-sum
       responses:
         '200':
-          description: Hint generated
+          description: Hint generated successfully
           content:
             application/json:
               schema:
@@ -269,7 +1133,128 @@ paths:
                 properties:
                   hint:
                     type: string
+                    description: AI-generated hint text
+                    example: Consider using a hash map to store values you've seen
                   hints_used:
                     type: integer
+                    description: Total hints used for this problem
+                    example: 1
         '403':
-          description: Maximum hints reached
+          description: Maximum hints reached (3) or forbidden role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: AI service error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/agent/hint-count:
+    get:
+      summary: Get hint count
+      description: Get the number of hints used for a specific problem by the authenticated user
+      tags: [Agent]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: problemId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Problem MongoDB ObjectId
+          example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Hint count retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hintsUsed:
+                    type: integer
+                    description: Number of hints used (0-3)
+                    example: 2
+                  maxHints:
+                    type: integer
+                    description: Maximum hints allowed
+                    example: 3
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/agent/save-hint:
+    post:
+      summary: Save hint (internal)
+      description: Internal endpoint called by AI service to save generated hint
+      tags: [Agent]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, problem_id, hint_text, hint_index]
+              properties:
+                user_id:
+                  type: string
+                  description: User MongoDB ObjectId
+                problem_id:
+                  type: string
+                  description: Problem MongoDB ObjectId
+                hint_text:
+                  type: string
+                  description: Generated hint text
+                hint_index:
+                  type: integer
+                  minimum: 1
+                  maximum: 3
+                  description: Hint number (1-3)
+      responses:
+        '201':
+          description: Hint saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Hint saved
+                  hintId:
+                    type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Auth
+    description: Authentication and authorization endpoints
+  - name: Problems
+    description: Problem management endpoints
+  - name: Submissions
+    description: Code submission and judging endpoints
+  - name: Contests
+    description: Contest management and participation endpoints
+  - name: Users
+    description: User profile and management endpoints
+  - name: Agent
+    description: AI hint generation endpoints

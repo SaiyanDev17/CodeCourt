@@ -36,17 +36,16 @@ app.use('/api/users', require('./modules/users/routes'));
 app.use('/api/agent', require('./modules/agent/routes'));
 
 // Swagger documentation
-if (process.env.NODE_ENV !== 'production') {
-  const swaggerUi = require('swagger-ui-express');
-  const YAML = require('yamljs');
-  const path = require('path');
-  
-  try {
-    const swaggerDocument = YAML.load(path.join(__dirname, '../swagger/swagger.yaml'));
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-  } catch (error) {
-    console.warn('Swagger documentation not available:', error.message);
-  }
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');
+
+try {
+  const swaggerDocument = YAML.load(path.join(__dirname, '../swagger/swagger.yaml'));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  console.log('Swagger UI available at /api-docs');
+} catch (error) {
+  console.warn('Swagger documentation not available:', error.message);
 }
 
 // 404 handler

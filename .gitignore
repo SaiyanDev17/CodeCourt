@@ -58,3 +58,7 @@ coverage/
 # Misc
 *.bak
 *.tmp
+
+# Local file uploads (development only)
+backend/uploads/
+uploads/
