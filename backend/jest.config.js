@@ -1,0 +1,18 @@
+module.exports = {
+  testEnvironment: 'node',
+  coverageDirectory: 'coverage',
+  collectCoverageFrom: [
+    'src/**/*.js',
+    '!src/**/*.test.js',
+    '!src/**/*.integration.test.js'
+  ],
+  testMatch: [
+    '**/src/**/*.test.js'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'integration.test.js'
+  ],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testTimeout: 10000
+};
