@@ -166,82 +166,82 @@
 ## PHASE 2: Core Backend Implementation (Week 2-3)
 
 ### 2.1 Database & Config Setup — P1
-- [ ] 2.1.1 Implement `backend/src/config/db.js` — Mongoose connection with retry logic
-- [ ] 2.1.2 Implement `backend/src/config/redis.js` — ioredis client with connection handling
-- [ ] 2.1.3 Implement `backend/src/config/s3.js` — AWS S3 client initialization
-- [ ] 2.1.4 Implement `backend/src/config/bullmq.js` — BullMQ connection config
-- [ ] 2.1.5 Implement `backend/src/config/constants.js` — roles, verdicts, limits
+- [x] 2.1.1 Implement `backend/src/config/db.js` — Mongoose connection with retry logic
+- [x] 2.1.2 Implement `backend/src/config/redis.js` — ioredis client with connection handling
+- [x] 2.1.3 Implement `backend/src/config/s3.js` — AWS S3 client initialization
+- [x] 2.1.4 Implement `backend/src/config/bullmq.js` — BullMQ connection config
+- [x] 2.1.5 Implement `backend/src/config/constants.js` — roles, verdicts, limits
 
 ### 2.2 Auth Module Implementation — P1
-- [ ] 2.2.1 Implement `User` Mongoose model (username, email, passwordHash, role, timestamps)
-- [ ] 2.2.2 Implement `POST /api/auth/register` — bcrypt hash (cost 10), unique validation, return 201
-- [ ] 2.2.3 Implement `POST /api/auth/login` — validate credentials, issue JWT tokens, set cookie
-- [ ] 2.2.4 Implement `POST /api/auth/refresh` — verify refresh token, rotate tokens, blacklist old
-- [ ] 2.2.5 Implement `POST /api/auth/logout` — blacklist refresh token in Redis, clear cookie
-- [ ] 2.2.6 Implement `authGuard` middleware — verify Bearer JWT, attach req.user
-- [ ] 2.2.7 Implement `roleGuard` middleware — check req.user.role against allowed array
-- [ ] 2.2.8 Implement rate limit middleware — 10 login attempts/IP/15min using Redis store
-- [ ] 2.2.9 Write unit tests for auth service (register, login, refresh, logout, blacklist)
-- [ ] 2.2.10 **[PBT]** Write property test: refresh token uniqueness invariant (fast-check)
+- [x] 2.2.1 Implement `User` Mongoose model (username, email, passwordHash, role, timestamps)
+- [x] 2.2.2 Implement `POST /api/auth/register` — bcrypt hash (cost 10), unique validation, return 201
+- [x] 2.2.3 Implement `POST /api/auth/login` — validate credentials, issue JWT tokens, set cookie
+- [x] 2.2.4 Implement `POST /api/auth/refresh` — verify refresh token, rotate tokens, blacklist old
+- [x] 2.2.5 Implement `POST /api/auth/logout` — blacklist refresh token in Redis, clear cookie
+- [x] 2.2.6 Implement `authGuard` middleware — verify Bearer JWT, attach req.user
+- [x] 2.2.7 Implement `roleGuard` middleware — check req.user.role against allowed array
+- [x] 2.2.8 Implement rate limit middleware — 10 login attempts/IP/15min using Redis store
+- [x] 2.2.9 Write unit tests for auth service (register, login, refresh, logout, blacklist)
+- [x] 2.2.10 **[PBT]** Write property test: refresh token uniqueness invariant (fast-check)
 
 ### 2.3 Problem Module Implementation — P1
-- [ ] 2.3.1 Implement `Problem` Mongoose model (title, slug, description, constraints, timeLimit, memoryLimit, difficulty, sampleTestCases, hiddenTestCasesS3Key, status, rejectionReason, authorId, timestamps)
-- [ ] 2.3.2 Implement `POST /api/problems` — create draft, validate fields, return 201
-- [ ] 2.3.3 Implement `GET /api/problems` — list published, Redis cache (TTL 60s), fallback MongoDB
-- [ ] 2.3.4 Implement `GET /api/problems/:slug` — get problem detail
-- [ ] 2.3.5 Implement `PUT /api/problems/:id` — update (owner only), revert to draft if tests changed
-- [ ] 2.3.6 Implement `POST /api/problems/:id/upload-tests` — upload ZIP to S3, store URL
-- [ ] 2.3.7 Implement `POST /api/problems/:id/approve` — admin only, draft→published, invalidate cache
-- [ ] 2.3.8 Implement `POST /api/problems/:id/reject` — admin only, set rejected + reason
-- [ ] 2.3.9 Write unit tests for problem service (CRUD, approval, cache invalidation)
+- [x] 2.3.1 Implement `Problem` Mongoose model (title, slug, description, constraints, timeLimit, memoryLimit, difficulty, sampleTestCases, hiddenTestCasesS3Key, status, rejectionReason, authorId, timestamps)
+- [x] 2.3.2 Implement `POST /api/problems` — create draft, validate fields, return 201
+- [x] 2.3.3 Implement `GET /api/problems` — list published, Redis cache (TTL 60s), fallback MongoDB
+- [x] 2.3.4 Implement `GET /api/problems/:slug` — get problem detail
+- [x] 2.3.5 Implement `PUT /api/problems/:id` — update (owner only), revert to draft if tests changed
+- [x] 2.3.6 Implement `POST /api/problems/:id/upload-tests` — upload ZIP to S3, store URL
+- [x] 2.3.7 Implement `POST /api/problems/:id/approve` — admin only, draft→published, invalidate cache
+- [x] 2.3.8 Implement `POST /api/problems/:id/reject` — admin only, set rejected + reason
+- [x] 2.3.9 Write unit tests for problem service (CRUD, approval, cache invalidation)
 
 ### 2.4 Judge Engine Implementation — P2
-- [ ] 2.4.1 Implement `Submission` Mongoose model (userId, problemId, contestId, language, code, verdict, executionTime, memoryUsed, compilerError, createdAt)
-- [ ] 2.4.2 Implement `POST /api/submissions` — create PENDING, enqueue BullMQ, return 202
-- [ ] 2.4.3 Implement `GET /api/submissions/:id` — get detail (owner only)
-- [ ] 2.4.4 Implement `GET /api/submissions/problem/:problemId` — list own submissions
-- [ ] 2.4.5 Implement `jobs/submission.queue.js` — BullMQ Queue with Redis connection
-- [ ] 2.4.6 Implement `jobs/submission.worker.js` — dequeue, fetch problem, download S3 tests, spawn judge, collect verdict, update MongoDB, emit Socket.io
-- [ ] 2.4.7 Write `docker/judges/cpp/Dockerfile` — gcc:13-alpine, compile + timeout run, network=none
-- [ ] 2.4.8 Write `docker/judges/python/Dockerfile` — python:3.11-alpine, timeout run, network=none
-- [ ] 2.4.9 Implement verdict mapping logic — AC, WA, TLE (exit 124), MLE (OOM), RE, CE
-- [ ] 2.4.10 Write unit tests for verdict mapping
-- [ ] 2.4.11 **[PBT]** Write property test: verdict completeness (always one of AC/WA/TLE/MLE/RE/CE)
-- [ ] 2.4.12 **[PBT]** Write property test: judge determinism (same code → same verdict)
+- [x] 2.4.1 Implement `Submission` Mongoose model (userId, problemId, contestId, language, code, verdict, executionTime, memoryUsed, compilerError, createdAt)
+- [x] 2.4.2 Implement `POST /api/submissions` — create PENDING, enqueue BullMQ, return 202
+- [x] 2.4.3 Implement `GET /api/submissions/:id` — get detail (owner only)
+- [x] 2.4.4 Implement `GET /api/submissions/problem/:problemId` — list own submissions
+- [x] 2.4.5 Implement `jobs/submission.queue.js` — BullMQ Queue with Redis connection
+- [x] 2.4.6 Implement `jobs/submission.worker.js` — dequeue, fetch problem, download S3 tests, spawn judge, collect verdict, update MongoDB, emit Socket.io
+- [x] 2.4.7 Write `docker/judges/cpp/Dockerfile` — gcc:13-alpine, compile + timeout run, network=none
+- [x] 2.4.8 Write `docker/judges/python/Dockerfile` — python:3.11-alpine, timeout run, network=none
+- [x] 2.4.9 Implement verdict mapping logic — AC, WA, TLE (exit 124), MLE (OOM), RE, CE
+- [x] 2.4.10 Write unit tests for verdict mapping
+- [x] 2.4.11 **[PBT]** Write property test: verdict completeness (always one of AC/WA/TLE/MLE/RE/CE)
+- [x] 2.4.12 **[PBT]** Write property test: judge determinism (same code → same verdict)
 
 ### 2.5 Contest Module Implementation — P3
-- [ ] 2.5.1 Implement `Contest` model (title, status, startTime, endTime, problemIds, participants, createdBy, timestamps)
-- [ ] 2.5.2 Implement `ContestScore` model (contestId, userId, totalScore, problemScores array, updatedAt)
-- [ ] 2.5.3 Implement `POST /api/contests` — create (admin/problem_setter), validate endTime > startTime + 30min
-- [ ] 2.5.4 Implement `GET /api/contests` — list all contests
-- [ ] 2.5.5 Implement `GET /api/contests/:id` — get contest detail
-- [ ] 2.5.6 Implement `POST /api/contests/:id/register` — add contestant to participants
-- [ ] 2.5.7 Implement contest submission flow — record against contest, compute ICPC score, ignore duplicate AC
-- [ ] 2.5.8 Implement `GET /api/contests/:id/leaderboard` — top-50, Redis cache (TTL 10s)
-- [ ] 2.5.9 Implement `cron/contest.cron.js` — every 30s, transition upcoming→ongoing→ended, invalidate cache
-- [ ] 2.5.10 Write unit tests for ICPC scoring and state transitions
-- [ ] 2.5.11 **[PBT]** Write property test: score monotonicity (new AC never decreases score)
-- [ ] 2.5.12 **[PBT]** Write property test: leaderboard ordering invariant
+- [x] 2.5.1 Implement `Contest` model (title, status, startTime, endTime, problemIds, participants, createdBy, timestamps)
+- [x] 2.5.2 Implement `ContestScore` model (contestId, userId, totalScore, problemScores array, updatedAt)
+- [x] 2.5.3 Implement `POST /api/contests` — create (admin/problem_setter), validate endTime > startTime + 30min
+- [x] 2.5.4 Implement `GET /api/contests` — list all contests
+- [x] 2.5.5 Implement `GET /api/contests/:id` — get contest detail
+- [x] 2.5.6 Implement `POST /api/contests/:id/register` — add contestant to participants
+- [x] 2.5.7 Implement contest submission flow — record against contest, compute ICPC score, ignore duplicate AC
+- [x] 2.5.8 Implement `GET /api/contests/:id/leaderboard` — top-50, Redis cache (TTL 10s)
+- [x] 2.5.9 Implement `cron/contest.cron.js` — every 30s, transition upcoming→ongoing→ended, invalidate cache
+- [x] 2.5.10 Write unit tests for ICPC scoring and state transitions
+- [x] 2.5.11 **[PBT]** Write property test: score monotonicity (new AC never decreases score)
+- [x] 2.5.12 **[PBT]** Write property test: leaderboard ordering invariant
 
 ### 2.6 Socket.io Implementation — P3
-- [ ] 2.6.1 Implement `socket/index.js` — Socket.io init on HTTP server, JWT auth middleware
-- [ ] 2.6.2 Implement `socket/verdict.socket.js` — join user:{userId} room, emit verdict event
-- [ ] 2.6.3 Implement `socket/leaderboard.socket.js` — join contest:{contestId} room, emit leaderboard:update
-- [ ] 2.6.4 Write integration test: submit code → receive verdict Socket.io event
+- [x] 2.6.1 Implement `socket/index.js` — Socket.io init on HTTP server, JWT auth middleware
+- [x] 2.6.2 Implement `socket/verdict.socket.js` — join user:{userId} room, emit verdict event
+- [x] 2.6.3 Implement `socket/leaderboard.socket.js` — join contest:{contestId} room, emit leaderboard:update
+- [x] 2.6.4 Write integration test: submit code → receive verdict Socket.io event
 
 ### 2.7 Users Module Implementation — P1
-- [ ] 2.7.1 Implement `GET /api/users/:username` — get public profile, Redis cache (TTL 300s)
-- [ ] 2.7.2 Implement `PUT /api/users/:id/role` — admin only, update role, invalidate cache
+- [x] 2.7.1 Implement `GET /api/users/:username` — get public profile, Redis cache (TTL 300s)
+- [x] 2.7.2 Implement `PUT /api/users/:id/role` — admin only, update role, invalidate cache
 
 ### 2.8 Middleware Implementation — P1 + P4
-- [ ] 2.8.1 Implement `errorHandler.js` — global error handler, structured JSON errors — **P1**
-- [ ] 2.8.2 Implement `validate.js` — Joi schema validation middleware — **P1**
-- [ ] 2.8.3 Implement Redis cache helpers in `config/redis.js` — get, set, del with JSON — **P4**
+- [x] 2.8.1 Implement `errorHandler.js` — global error handler, structured JSON errors — **P1**
+- [x] 2.8.2 Implement `validate.js` — Joi schema validation middleware — **P1**
+- [x] 2.8.3 Implement Redis cache helpers in `config/redis.js` — get, set, del with JSON — **P4**
 
 ### 2.9 Express App Assembly — P1
-- [ ] 2.9.1 Implement `src/app.js` — mount all routes, middleware stack (cors, json, authGuard, errorHandler)
-- [ ] 2.9.2 Implement `server.js` — HTTP server, attach Socket.io, start listening
-- [ ] 2.9.3 Test full backend locally: `npm run dev` → verify all endpoints work
+- [x] 2.9.1 Implement `src/app.js` — mount all routes, middleware stack (cors, json, authGuard, errorHandler)
+- [x] 2.9.2 Implement `server.js` — HTTP server, attach Socket.io, start listening
+- [x] 2.9.3 Test full backend locally: `npm run dev` → verify all endpoints work
 
 ---
 

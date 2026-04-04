@@ -1,25 +1,9 @@
 // BullMQ submission queue
 const { Queue } = require('bullmq');
-const redis = require('../config/redis');
+const { queueOptions } = require('../config/bullmq');
 
-// Create submission queue
-const submissionQueue = new Queue('submissions', {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000
-    },
-    removeOnComplete: {
-      age: 3600, // Keep completed jobs for 1 hour
-      count: 1000
-    },
-    removeOnFail: {
-      age: 86400 // Keep failed jobs for 24 hours
-    }
-  }
-});
+// Create submission queue using centralized BullMQ configuration
+const submissionQueue = new Queue('submissions', queueOptions);
 
 /**
  * Add submission to queue

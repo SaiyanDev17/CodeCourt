@@ -1,13 +1,19 @@
 // Auth controller
 // Handles HTTP request/response logic for authentication endpoints
 
+const authService = require('./service');
+
 class AuthController {
   async register(req, res, next) {
     try {
-      // TODO: Validate request body
-      // TODO: Call AuthService.register()
-      // TODO: Return 201 with success message
-      res.status(501).json({ message: 'Not implemented' });
+      const { username, email, password } = req.body;
+      
+      const user = await authService.register(username, email, password);
+      
+      res.status(201).json({
+        message: 'User registered successfully',
+        user
+      });
     } catch (error) {
       next(error);
     }
@@ -15,11 +21,23 @@ class AuthController {
 
   async login(req, res, next) {
     try {
-      // TODO: Validate credentials
-      // TODO: Call AuthService.login()
-      // TODO: Set refresh token cookie
-      // TODO: Return access token
-      res.status(501).json({ message: 'Not implemented' });
+      const { email, password } = req.body;
+      
+      const { accessToken, refreshToken, user } = await authService.login(email, password);
+      
+      // Set refresh token as HTTP-only cookie
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      
+      res.json({
+        message: 'Login successful',
+        accessToken,
+        user
+      });
     } catch (error) {
       next(error);
     }
@@ -27,11 +45,28 @@ class AuthController {
 
   async refresh(req, res, next) {
     try {
-      // TODO: Extract refresh token from cookie
-      // TODO: Call AuthService.refresh()
-      // TODO: Set new refresh token cookie
-      // TODO: Return new access token
-      res.status(501).json({ message: 'Not implemented' });
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (!refreshToken) {
+        const error = new Error('Refresh token not provided');
+        error.statusCode = 401;
+        throw error;
+      }
+      
+      const { accessToken, refreshToken: newRefreshToken } = await authService.refresh(refreshToken);
+      
+      // Set new refresh token cookie
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+      
+      res.json({
+        message: 'Token refreshed successfully',
+        accessToken
+      });
     } catch (error) {
       next(error);
     }
@@ -39,11 +74,18 @@ class AuthController {
 
   async logout(req, res, next) {
     try {
-      // TODO: Extract refresh token from cookie
-      // TODO: Call AuthService.logout()
-      // TODO: Clear cookie
-      // TODO: Return 200
-      res.status(501).json({ message: 'Not implemented' });
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+      
+      // Clear cookie
+      res.clearCookie('refreshToken');
+      
+      res.json({
+        message: 'Logout successful'
+      });
     } catch (error) {
       next(error);
     }

@@ -1,13 +1,17 @@
 // Problems controller
 // Handles HTTP request/response logic for problem management endpoints
 
+const problemService = require('./service');
+
 class ProblemsController {
   async listProblems(req, res, next) {
     try {
-      // TODO: Call ProblemService.listPublished()
-      // TODO: Return cached results from Redis if available
-      // TODO: Return 200 with problem list
-      res.status(501).json({ message: 'Not implemented' });
+      const problems = await problemService.listPublished();
+      
+      res.json({
+        count: problems.length,
+        problems
+      });
     } catch (error) {
       next(error);
     }
@@ -15,10 +19,20 @@ class ProblemsController {
 
   async getProblemBySlug(req, res, next) {
     try {
-      // TODO: Extract slug from params
-      // TODO: Call ProblemService.getBySlug()
-      // TODO: Return 200 with problem detail or 404 if not found
-      res.status(501).json({ message: 'Not implemented' });
+      const { slug } = req.params;
+      
+      const problem = await problemService.getBySlug(slug);
+      
+      if (!problem) {
+        return res.status(404).json({ error: 'Problem not found' });
+      }
+
+      // Don't expose S3 key to non-owners
+      if (!req.user || problem.authorId._id.toString() !== req.user.id) {
+        delete problem.hiddenTestCasesS3Key;
+      }
+      
+      res.json({ problem });
     } catch (error) {
       next(error);
     }
@@ -26,11 +40,15 @@ class ProblemsController {
 
   async createProblem(req, res, next) {
     try {
-      // TODO: Validate request body (title, slug, description, constraints, timeLimit, memoryLimit, difficulty, sampleTestCases)
-      // TODO: Check slug uniqueness
-      // TODO: Call ProblemService.create() with status 'draft'
-      // TODO: Return 201 with created problem
-      res.status(501).json({ message: 'Not implemented' });
+      const problemData = req.body;
+      const authorId = req.user.id;
+      
+      const problem = await problemService.create(problemData, authorId);
+      
+      res.status(201).json({
+        message: 'Problem created successfully',
+        problem
+      });
     } catch (error) {
       next(error);
     }
@@ -38,13 +56,16 @@ class ProblemsController {
 
   async updateProblem(req, res, next) {
     try {
-      // TODO: Extract problem ID from params
-      // TODO: Verify ownership (req.user.id === problem.authorId)
-      // TODO: Call ProblemService.update()
-      // TODO: If updating test cases on published problem, transition to 'draft'
-      // TODO: Invalidate Redis cache
-      // TODO: Return 200 with updated problem
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      const updateData = req.body;
+      const userId = req.user.id;
+      
+      const problem = await problemService.update(id, updateData, userId);
+      
+      res.json({
+        message: 'Problem updated successfully',
+        problem
+      });
     } catch (error) {
       next(error);
     }
@@ -52,13 +73,25 @@ class ProblemsController {
 
   async uploadTestCases(req, res, next) {
     try {
-      // TODO: Extract problem ID from params
-      // TODO: Verify ownership
-      // TODO: Extract ZIP file from multipart form
-      // TODO: Upload to S3 with key: test-cases/{problem_id}/hidden.zip
-      // TODO: Update problem.hiddenTestCasesS3Key in MongoDB
-      // TODO: Return 200 with S3 URL
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      // Check if file was uploaded
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // Verify it's a ZIP file
+      if (req.file.mimetype !== 'application/zip' && !req.file.originalname.endsWith('.zip')) {
+        return res.status(400).json({ error: 'File must be a ZIP archive' });
+      }
+      
+      const result = await problemService.uploadTestCases(id, req.file.buffer, userId);
+      
+      res.json({
+        message: 'Test cases uploaded successfully',
+        ...result
+      });
     } catch (error) {
       next(error);
     }
@@ -66,12 +99,14 @@ class ProblemsController {
 
   async approveProblem(req, res, next) {
     try {
-      // TODO: Extract problem ID from params
-      // TODO: Verify admin role (handled by roleGuard middleware)
-      // TODO: Call ProblemService.approve() - transition status to 'published'
-      // TODO: Invalidate Redis problem list cache
-      // TODO: Return 200 with updated problem
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      
+      const problem = await problemService.approve(id);
+      
+      res.json({
+        message: 'Problem approved and published',
+        problem
+      });
     } catch (error) {
       next(error);
     }
@@ -79,11 +114,19 @@ class ProblemsController {
 
   async rejectProblem(req, res, next) {
     try {
-      // TODO: Extract problem ID and rejection reason from request
-      // TODO: Verify admin role (handled by roleGuard middleware)
-      // TODO: Call ProblemService.reject() - transition status to 'rejected'
-      // TODO: Return 200 with updated problem
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      const { rejectionReason } = req.body;
+      
+      if (!rejectionReason) {
+        return res.status(400).json({ error: 'Rejection reason is required' });
+      }
+      
+      const problem = await problemService.reject(id, rejectionReason);
+      
+      res.json({
+        message: 'Problem rejected',
+        problem
+      });
     } catch (error) {
       next(error);
     }

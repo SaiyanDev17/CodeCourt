@@ -1,77 +1,261 @@
 // Auth module tests
-// Unit tests and property-based tests for authentication
-
-const { describe, it, expect } = require('@jest/globals');
+const request = require('supertest');
+const mongoose = require('mongoose');
+const app = require('../../app');
+const User = require('./model');
+const redis = require('../../config/redis');
+const authService = require('./service');
 
 describe('Auth Module', () => {
-  describe('User Registration', () => {
-    it('should create a new user with valid credentials', () => {
-      // TODO: Test registration with unique username/email
-      expect(true).toBe(true);
+  beforeAll(async () => {
+    // Connect to test database
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/codecourt-test');
+    }
+  });
+
+  afterAll(async () => {
+    await User.deleteMany({});
+    await mongoose.connection.close();
+    redis.quit();
+  });
+
+  beforeEach(async () => {
+    await User.deleteMany({});
+    // Clear Redis test keys
+    const keys = await redis.keys('refresh:*');
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    const blacklistKeys = await redis.keys('blacklist:*');
+    if (blacklistKeys.length > 0) {
+      await redis.del(...blacklistKeys);
+    }
+  });
+
+  describe('POST /api/auth/register', () => {
+    it('should register a new user with valid data', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'testuser',
+          email: 'test@example.com',
+          password: 'password123'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.message).toBe('User registered successfully');
+      expect(res.body.user).toHaveProperty('id');
+      expect(res.body.user.username).toBe('testuser');
+      expect(res.body.user.email).toBe('test@example.com');
+      expect(res.body.user.role).toBe('contestant');
+      expect(res.body.user).not.toHaveProperty('passwordHash');
     });
 
-    it('should reject duplicate email', () => {
-      // TODO: Test 409 response for duplicate email
-      expect(true).toBe(true);
+    it('should reject registration with duplicate username', async () => {
+      await User.create({
+        username: 'testuser',
+        email: 'first@example.com',
+        passwordHash: 'hash'
+      });
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'testuser',
+          email: 'second@example.com',
+          password: 'password123'
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toContain('username already exists');
     });
 
-    it('should reject password shorter than 8 characters', () => {
-      // TODO: Test validation error
-      expect(true).toBe(true);
+    it('should reject registration with duplicate email', async () => {
+      await User.create({
+        username: 'firstuser',
+        email: 'test@example.com',
+        passwordHash: 'hash'
+      });
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'seconduser',
+          email: 'test@example.com',
+          password: 'password123'
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toContain('email already exists');
+    });
+
+    it('should reject registration with invalid data', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'ab', // too short
+          email: 'invalid-email',
+          password: 'short'
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error).toBe('Validation Error');
     });
   });
 
-  describe('User Login', () => {
-    it('should return access token and set refresh cookie on valid login', () => {
-      // TODO: Test successful login flow
-      expect(true).toBe(true);
+  describe('POST /api/auth/login', () => {
+    beforeEach(async () => {
+      // Create a test user
+      await authService.register('testuser', 'test@example.com', 'password123');
     });
 
-    it('should return 401 for invalid credentials', () => {
-      // TODO: Test failed login
-      expect(true).toBe(true);
+    it('should login with valid credentials', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'password123'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe('Login successful');
+      expect(res.body).toHaveProperty('accessToken');
+      expect(res.body.user.email).toBe('test@example.com');
+      expect(res.headers['set-cookie']).toBeDefined();
+      expect(res.headers['set-cookie'][0]).toContain('refreshToken');
+    });
+
+    it('should reject login with invalid email', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'wrong@example.com',
+          password: 'password123'
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Invalid credentials');
+    });
+
+    it('should reject login with invalid password', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'wrongpassword'
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Invalid credentials');
     });
   });
 
-  describe('Token Refresh', () => {
-    it('should issue new tokens and invalidate old refresh token', () => {
-      // TODO: Test token rotation
-      expect(true).toBe(true);
+  describe('POST /api/auth/refresh', () => {
+    let refreshToken;
+
+    beforeEach(async () => {
+      await authService.register('testuser', 'test@example.com', 'password123');
+      const loginResult = await authService.login('test@example.com', 'password123');
+      refreshToken = loginResult.refreshToken;
     });
 
-    it('should reject blacklisted refresh token', () => {
-      // TODO: Test blacklist enforcement
-      expect(true).toBe(true);
+    it('should refresh access token with valid refresh token', async () => {
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe('Token refreshed successfully');
+      expect(res.body).toHaveProperty('accessToken');
+      expect(res.headers['set-cookie']).toBeDefined();
+    });
+
+    it('should reject refresh with missing token', async () => {
+      const res = await request(app)
+        .post('/api/auth/refresh');
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Refresh token not provided');
+    });
+
+    it('should reject refresh with blacklisted token', async () => {
+      // First refresh to blacklist the old token
+      await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      // Try to use the old token again
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      expect(res.status).toBe(401);
     });
   });
 
-  describe('Logout', () => {
-    it('should blacklist refresh token and clear cookie', () => {
-      // TODO: Test logout flow
-      expect(true).toBe(true);
+  describe('POST /api/auth/logout', () => {
+    let refreshToken;
+
+    beforeEach(async () => {
+      await authService.register('testuser', 'test@example.com', 'password123');
+      const loginResult = await authService.login('test@example.com', 'password123');
+      refreshToken = loginResult.refreshToken;
+    });
+
+    it('should logout successfully', async () => {
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe('Logout successful');
+    });
+
+    it('should blacklist refresh token after logout', async () => {
+      await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      // Try to use the token after logout
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refreshToken=${refreshToken}`]);
+
+      expect(res.status).toBe(401);
     });
   });
 
-  describe('Property-Based Tests', () => {
-    it('should allow login after registration (round-trip property)', () => {
-      // TODO: Implement with fast-check
-      // FOR ALL valid (username, email, password) triples,
-      // registering then logging in SHALL return a valid Access_Token
-      expect(true).toBe(true);
+  describe('AuthService', () => {
+    it('should hash password with bcrypt cost 10', async () => {
+      const user = await authService.register('testuser', 'test@example.com', 'password123');
+      const dbUser = await User.findById(user.id);
+      
+      // Bcrypt hashes start with $2b$10$ for cost 10
+      expect(dbUser.passwordHash).toMatch(/^\$2b\$10\$/);
     });
 
-    it('should enforce token uniqueness in rotation sequences', () => {
-      // TODO: Implement with fast-check
-      // FOR ALL Refresh_Token rotation sequences of length N,
-      // each token SHALL be usable exactly once
-      expect(true).toBe(true);
+    it('should store refresh token hash in Redis', async () => {
+      const user = await authService.register('testuser', 'test@example.com', 'password123');
+      const { refreshToken } = await authService.login('test@example.com', 'password123');
+      
+      const storedHash = await redis.get(`refresh:${user.id}`);
+      expect(storedHash).toBeDefined();
+      expect(storedHash).toHaveLength(64); // SHA256 hex digest length
     });
 
-    it('should always reject blacklisted tokens', () => {
-      // TODO: Implement with fast-check
-      // FOR ALL blacklisted Refresh_Tokens,
-      // re-submitting SHALL always return 401
-      expect(true).toBe(true);
+    it('should rotate refresh tokens on refresh', async () => {
+      const user = await authService.register('testuser', 'test@example.com', 'password123');
+      const { refreshToken: token1 } = await authService.login('test@example.com', 'password123');
+      const { refreshToken: token2 } = await authService.refresh(token1);
+      
+      expect(token1).not.toBe(token2);
+      
+      // Old token should be blacklisted
+      const crypto = require('crypto');
+      const token1Hash = crypto.createHash('sha256').update(token1).digest('hex');
+      const isBlacklisted = await redis.get(`blacklist:${token1Hash}`);
+      expect(isBlacklisted).toBe('1');
     });
   });
 });

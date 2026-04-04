@@ -1,12 +1,13 @@
 // User service
 const User = require('../auth/model');
 const redis = require('../../config/redis');
+const { ROLES, LIMITS, REDIS_KEYS } = require('../../config/constants');
 
 /**
  * Get user profile with Redis caching (TTL 300s)
  */
 exports.getUserProfile = async (username) => {
-  const cacheKey = `user:profile:${username}`;
+  const cacheKey = `${REDIS_KEYS.USER_PROFILE}:${username}`;
   
   // Try cache first
   const cached = await redis.get(cacheKey);
@@ -19,7 +20,7 @@ exports.getUserProfile = async (username) => {
   
   if (user) {
     // Cache for 5 minutes
-    await redis.setex(cacheKey, 300, JSON.stringify(user));
+    await redis.setex(cacheKey, LIMITS.CACHE_TTL_USER_PROFILE, JSON.stringify(user));
   }
   
   return user;
@@ -29,7 +30,7 @@ exports.getUserProfile = async (username) => {
  * Update user role and invalidate cache
  */
 exports.updateUserRole = async (userId, role) => {
-  const validRoles = ['admin', 'problem_setter', 'contestant'];
+  const validRoles = Object.values(ROLES);
   
   if (!validRoles.includes(role)) {
     throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
@@ -43,7 +44,7 @@ exports.updateUserRole = async (userId, role) => {
   
   if (user) {
     // Invalidate cache
-    const cacheKey = `user:profile:${user.username}`;
+    const cacheKey = `${REDIS_KEYS.USER_PROFILE}:${user.username}`;
     await redis.del(cacheKey);
   }
   

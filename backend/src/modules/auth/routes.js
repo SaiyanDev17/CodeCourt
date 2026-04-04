@@ -3,28 +3,20 @@
 
 const express = require('express');
 const router = express.Router();
-
-// TODO: Import controller methods
-// TODO: Import middleware (authGuard, validate)
+const authController = require('./controller');
+const { validate, schemas } = require('../../middleware/validate');
+const { loginRateLimiter } = require('../../middleware/rateLimit');
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
-  res.status(501).json({ message: 'Not implemented' });
-});
+router.post('/register', validate(schemas.register), authController.register);
 
-// POST /api/auth/login
-router.post('/login', (req, res) => {
-  res.status(501).json({ message: 'Not implemented' });
-});
+// POST /api/auth/login (with rate limiting)
+router.post('/login', loginRateLimiter, validate(schemas.login), authController.login);
 
 // POST /api/auth/refresh
-router.post('/refresh', (req, res) => {
-  res.status(501).json({ message: 'Not implemented' });
-});
+router.post('/refresh', authController.refresh);
 
 // POST /api/auth/logout
-router.post('/logout', (req, res) => {
-  res.status(501).json({ message: 'Not implemented' });
-});
+router.post('/logout', authController.logout);
 
 module.exports = router;

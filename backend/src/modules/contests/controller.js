@@ -1,14 +1,26 @@
 // Contest controller
 // Handles HTTP request/response logic for contest endpoints
 
+const contestService = require('./service');
+
 class ContestController {
   async createContest(req, res, next) {
     try {
-      // TODO: Validate request body (title, startTime, endTime, problemIds)
-      // TODO: Check user role (admin or problem_setter)
-      // TODO: Call ContestService.createContest()
-      // TODO: Return 201 with contest object
-      res.status(501).json({ message: 'Not implemented' });
+      const { title, startTime, endTime, problemIds } = req.body;
+      const createdBy = req.user.id;
+      
+      const contest = await contestService.createContest(
+        title,
+        startTime,
+        endTime,
+        problemIds,
+        createdBy
+      );
+      
+      res.status(201).json({
+        message: 'Contest created successfully',
+        contest
+      });
     } catch (error) {
       next(error);
     }
@@ -16,9 +28,12 @@ class ContestController {
 
   async listContests(req, res, next) {
     try {
-      // TODO: Call ContestService.listContests()
-      // TODO: Return 200 with contests array
-      res.status(501).json({ message: 'Not implemented' });
+      const contests = await contestService.listContests();
+      
+      res.json({
+        count: contests.length,
+        contests
+      });
     } catch (error) {
       next(error);
     }
@@ -26,10 +41,11 @@ class ContestController {
 
   async getContest(req, res, next) {
     try {
-      // TODO: Extract contestId from params
-      // TODO: Call ContestService.getContestById()
-      // TODO: Return 200 with contest object
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      
+      const contest = await contestService.getContestById(id);
+      
+      res.json({ contest });
     } catch (error) {
       next(error);
     }
@@ -37,11 +53,12 @@ class ContestController {
 
   async registerForContest(req, res, next) {
     try {
-      // TODO: Extract contestId from params
-      // TODO: Extract userId from req.user (authenticated)
-      // TODO: Call ContestService.registerForContest()
-      // TODO: Return 200 with success message
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      const result = await contestService.registerForContest(id, userId);
+      
+      res.json(result);
     } catch (error) {
       next(error);
     }
@@ -49,10 +66,14 @@ class ContestController {
 
   async getLeaderboard(req, res, next) {
     try {
-      // TODO: Extract contestId from params
-      // TODO: Call ContestService.getLeaderboard()
-      // TODO: Return 200 with leaderboard array
-      res.status(501).json({ message: 'Not implemented' });
+      const { id } = req.params;
+      
+      const leaderboard = await contestService.getLeaderboard(id);
+      
+      res.json({
+        contestId: id,
+        leaderboard
+      });
     } catch (error) {
       next(error);
     }
