@@ -1,11 +1,14 @@
 # Production overrides for docker-compose.yml
 
-version: '3.8'
-
 services:
   api:
     image: ghcr.io/your-org/codecourt-api:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -18,6 +21,11 @@ services:
   ai-service:
     image: ghcr.io/your-org/codecourt-ai:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -29,6 +37,12 @@ services:
 
   mongo:
     restart: always
+    command: ["mongod", "--quiet", "--setParameter", "diagnosticDataCollectionEnabled=false", "--wiredTigerEngineConfigString", "verbose=[checkpoint:0]"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
@@ -37,6 +51,12 @@ services:
 
   redis:
     restart: always
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "900", "1"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
