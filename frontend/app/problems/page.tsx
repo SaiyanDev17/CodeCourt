@@ -23,7 +23,8 @@ export default function ProblemsPage() {
         const response = await api.get('/problems')
         
         // Update state with the fetched problems
-        setProblems(response.data)
+        // Extract the problems array from the response object { count, problems }
+        setProblems(response.data.problems)
       } catch (err: any) {
         // Handle errors (network issues, 500 errors, etc.)
         setError(err.response?.data?.message || 'Failed to load problems')
