@@ -181,15 +181,17 @@ const problemSchema = new mongoose.Schema(
  * Database Indexes
  * 
  * These indexes dramatically improve query performance:
- * - slug index: Fast lookups for /problems/:slug endpoint
- * - status index: Fast filtering for published problems list
- * - authorId index: Fast queries for "my problems" page
+ * - slug index: Created automatically by `unique: true` constraint (fast lookups for /problems/:slug)
+ * - status index: Explicit index for fast filtering of published problems list
+ * - authorId index: Explicit index for fast queries on "my problems" page
  * 
  * Performance impact:
  * - Without index: O(n) full table scan
  * - With index: O(log n) B-tree lookup
+ * 
+ * Note: Fields with `unique: true` automatically create indexes, so we don't need
+ * explicit index() calls for them. Only non-unique fields need explicit indexes.
  */
-problemSchema.index({ slug: 1 }); // Ascending index on slug (unique lookups)
 problemSchema.index({ status: 1 }); // Ascending index on status (filtering)
 problemSchema.index({ authorId: 1 }); // Ascending index on authorId (ownership queries)
 

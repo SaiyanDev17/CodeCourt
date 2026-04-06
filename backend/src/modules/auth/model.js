@@ -115,17 +115,16 @@ const userSchema = new mongoose.Schema(
 /**
  * Database Indexes
  * 
- * These indexes dramatically improve query performance:
- * - Without index: O(n) full table scan
- * - With index: O(log n) B-tree lookup
+ * Indexes are automatically created by the `unique: true` constraint on username and email fields.
+ * Mongoose creates these indexes during model initialization, providing O(log n) B-tree lookup performance.
+ * 
+ * No explicit index() calls are needed for fields with unique constraints, as they already create indexes.
  * 
  * Critical for:
- * - Login queries (findOne by email)
- * - Registration duplicate checks (findOne by username/email)
- * - User profile lookups (findOne by username)
+ * - Login queries (findOne by email) - uses email index from unique constraint
+ * - Registration duplicate checks (findOne by username/email) - uses indexes from unique constraints
+ * - User profile lookups (findOne by username) - uses username index from unique constraint
  */
-userSchema.index({ username: 1 }); // Ascending index on username
-userSchema.index({ email: 1 }); // Ascending index on email
 
 const User = mongoose.model('User', userSchema);
 
