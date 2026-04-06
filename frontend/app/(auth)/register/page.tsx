@@ -93,12 +93,12 @@ export default function RegisterPage() {
    * Validate Username Format
    * 
    * Username rules:
-   * - At least 3 characters
-   * - Only alphanumeric characters and underscores
-   * - No spaces
+   * - At least 3 characters, maximum 30 characters
+   * - Only alphanumeric characters (letters and numbers)
+   * - No spaces, no special characters, no underscores
    */
   const isValidUsername = (username: string): boolean => {
-    const usernameRegex = /^[a-zA-Z0-9_]{3,}$/
+    const usernameRegex = /^[a-zA-Z0-9]{3,30}$/
     return usernameRegex.test(username)
   }
   
@@ -126,7 +126,7 @@ export default function RegisterPage() {
     
     // Check if username format is valid
     if (!isValidUsername(username)) {
-      setError('Username must be at least 3 characters and contain only letters, numbers, and underscores')
+      setError('Username must be 3-30 characters and contain only letters and numbers')
       return false
     }
     
@@ -149,8 +149,8 @@ export default function RegisterPage() {
     }
     
     // Check minimum password length
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       return false
     }
     
@@ -339,7 +339,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
               <p className="mt-1 text-xs text-gray-500">
-                At least 3 characters, letters, numbers, and underscores only
+                At least 3 characters, letters and numbers only
               </p>
             </div>
             
@@ -386,7 +386,7 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
               <p className="mt-1 text-xs text-gray-500">
-                At least 6 characters
+                At least 8 characters
               </p>
             </div>
             
