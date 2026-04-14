@@ -354,15 +354,15 @@
 ## PHASE 7: Docker Compose (Week 5)
 
 ### 7.1 Docker Compose Setup — P2
-- [ ] 7.1.1 Write `docker-compose.yml` — services: api (Express :5000), ai-service (FastAPI :8000), mongo (MongoDB :27017), redis (Redis :6379)
-- [ ] 7.1.2 Configure shared network: `codecourt-network`
-- [ ] 7.1.3 Configure volumes: `mongo-data`, `redis-data`
-- [ ] 7.1.4 Update `.env.example` files — use docker-compose service hostnames (mongo, redis, api)
-- [ ] 7.1.5 Write `docker-compose.prod.yml` — production overrides (image tags, resource limits)
+- [x] 7.1.1 Write `docker-compose.yml` — services: api (Express :5001→5000), ai-service (FastAPI :8000), mongo (MongoDB :27017), redis (Redis :6379 with `--maxmemory 256mb --maxmemory-policy allkeys-lru --save 900 1`)
+- [x] 7.1.2 Configure shared network: `codecourt-network`
+- [x] 7.1.3 Configure volumes: `mongo-data`, `redis-data`
+- [x] 7.1.4 Update `.env.example` files — use docker-compose service hostnames (mongo, redis, api)
+- [x] 7.1.5 Write `docker-compose.prod.yml` — production overrides (image tags, resource limits)
 
 ### 7.2 Judge Integration in Compose — P2
-- [ ] 7.2.1 Mount Docker socket into api container: `/var/run/docker.sock:/var/run/docker.sock`
-- [ ] 7.2.2 Update `jobs/submission.worker.js` — spawn judge containers from within compose
+- [x] 7.2.1 Mount Docker socket into api container: `/var/run/docker.sock:/var/run/docker.sock`
+- [x] 7.2.2 Update `jobs/submission.worker.js` — spawn judge containers from within compose
 - [ ] 7.2.3 Test end-to-end: `docker compose up` → submit code → verify verdict
 
 ### 7.3 Compose Testing — All
@@ -375,14 +375,14 @@
 ## PHASE 8: Production Dockerfiles (Week 6)
 
 ### 8.1 Backend Dockerfile — P2
-- [ ] 8.1.1 Write `backend/docker/Dockerfile` — multi-stage: build stage (npm ci), production stage (node:20-alpine, non-root user)
-- [ ] 8.1.2 Write `backend/.dockerignore` — exclude node_modules, .env, tests
+- [x] 8.1.1 Write `backend/docker/Dockerfile` — multi-stage: build stage (npm ci), production stage (node:20-alpine, non-root user)
+- [x] 8.1.2 Write `backend/.dockerignore` — exclude node_modules, .env, tests
 - [ ] 8.1.3 Build image: `docker build -t codecourt-api:latest -f backend/docker/Dockerfile backend/`
 - [ ] 8.1.4 Test image: `docker run -p 5000:5000 codecourt-api:latest`
 
 ### 8.2 AI Service Dockerfile — P4
-- [ ] 8.2.1 Write `ai-service/Dockerfile` — multi-stage: python:3.11-slim, non-root user, pip install --no-cache-dir
-- [ ] 8.2.2 Write `ai-service/.dockerignore` — exclude venv, __pycache__, .env
+- [x] 8.2.1 Write `ai-service/Dockerfile` — multi-stage: python:3.11-slim, non-root user, pip install --no-cache-dir
+- [x] 8.2.2 Write `ai-service/.dockerignore` — exclude venv, __pycache__, .env
 - [ ] 8.2.3 Build image: `docker build -t codecourt-ai:latest ai-service/`
 - [ ] 8.2.4 Test image: `docker run -p 8000:8000 codecourt-ai:latest`
 
@@ -390,39 +390,39 @@
 - [ ] 8.3.1 Verify `backend/docker/judges/cpp/Dockerfile` builds: `docker build -t codecourt-judge-cpp backend/docker/judges/cpp/`
 - [ ] 8.3.2 Verify `backend/docker/judges/python/Dockerfile` builds: `docker build -t codecourt-judge-python backend/docker/judges/python/`
 - [ ] 8.3.3 Test C++ judge: run sample AC code → verify verdict
-- [ ] 8.3.4 Test Python judge: run sample WA code → verify verdict
+- [x] 8.3.4 Test Python judge: run sample WA code → verify verdict
 
 ---
 
 ## PHASE 9: CI/CD Pipeline (Week 6)
 
 ### 9.1 CI Workflow — P4
-- [ ] 9.1.1 Write `.github/workflows/ci.yml` — trigger on PR
-- [ ] 9.1.2 Add job: checkout, setup Node 20 + cache, `cd backend && npm ci && npm run lint && npm test`
-- [ ] 9.1.3 Add job: setup Python 3.11 + cache, `cd ai-service && pip install -r requirements.txt && pytest`
-- [ ] 9.1.4 Test CI: open PR → verify pipeline runs
+- [x] 9.1.1 Write `.github/workflows/ci.yml` — trigger on PR
+- [x] 9.1.2 Add job: checkout, setup Node 20 + cache, `cd backend && npm ci && npm run lint && npm test`
+- [x] 9.1.3 Add job: setup Python 3.11 + cache, `cd ai-service && pip install -r requirements.txt && pytest`
+- [-] 9.1.4 Test CI: open PR → verify pipeline runs
 
 ### 9.2 Deploy Workflow — P4
-- [ ] 9.2.1 Write `.github/workflows/deploy.yml` — trigger on push to main
-- [ ] 9.2.2 Add step: run CI jobs first
-- [ ] 9.2.3 Add step: Docker login to GHCR
-- [ ] 9.2.4 Add step: build + push `ghcr.io/<org>/codecourt-api:${{ github.sha }}`
-- [ ] 9.2.5 Add step: build + push `ghcr.io/<org>/codecourt-ai:${{ github.sha }}`
-- [ ] 9.2.6 Add step: build + push `ghcr.io/<org>/codecourt-judge-cpp:${{ github.sha }}`
-- [ ] 9.2.7 Add step: build + push `ghcr.io/<org>/codecourt-judge-python:${{ github.sha }}`
-- [ ] 9.2.8 Add step: `kubectl apply -f backend/k8s/` (using OKE kubeconfig secret)
+- [x] 9.2.1 Write `.github/workflows/deploy.yml` — trigger on push to main
+- [x] 9.2.2 Add step: run CI jobs first
+- [x] 9.2.3 Add step: Docker login to GHCR
+- [x] 9.2.4 Add step: build + push `ghcr.io/<org>/codecourt-api:${{ github.sha }}`
+- [x] 9.2.5 Add step: build + push `ghcr.io/<org>/codecourt-ai:${{ github.sha }}`
+- [x] 9.2.6 Add step: build + push `ghcr.io/<org>/codecourt-judge-cpp:${{ github.sha }}`
+- [x] 9.2.7 Add step: build + push `ghcr.io/<org>/codecourt-judge-python:${{ github.sha }}`
+- [x] 9.2.8 Add step: `kubectl apply -f backend/k8s/` (using OKE kubeconfig secret)
 
 ### 9.3 GitHub Secrets — P1
-- [ ] 9.3.1 Add secret: `GHCR_TOKEN` (GitHub Container Registry token)
-- [ ] 9.3.2 Add secret: `KUBECONFIG_OKE` (Oracle Cloud K8s kubeconfig)
-- [ ] 9.3.3 Add secret: `GROQ_API_KEY`
-- [ ] 9.3.4 Add secret: `AWS_ACCESS_KEY_ID`
-- [ ] 9.3.5 Add secret: `AWS_SECRET_ACCESS_KEY`
+- [x] 9.3.1 Add secret: `GHCR_TOKEN` (GitHub Container Registry token)
+- [x] 9.3.2 Add secret: `KUBECONFIG_OKE` (Oracle Cloud K8s kubeconfig)
+- [x] 9.3.3 Add secret: `GROQ_API_KEY`
+- [x] 9.3.4 Add secret: `AWS_ACCESS_KEY_ID`
+- [x] 9.3.5 Add secret: `AWS_SECRET_ACCESS_KEY`
 - [ ] 9.3.6 Add secret: `MONGODB_URI` (Atlas connection string)
 
 ### 9.4 CI/CD Testing — P4
 - [ ] 9.4.1 Test CI pipeline: open feature branch PR → verify lint + test pass
-- [ ] 9.4.2 Test deploy pipeline: merge to main → verify images pushed to GHCR
+- [-] 9.4.2 Test deploy pipeline: merge to main → verify images pushed to GHCR
 
 ---
 

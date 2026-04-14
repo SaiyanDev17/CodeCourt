@@ -74,7 +74,9 @@ export default function ProblemPage() {
         
         // Call GET /api/problems/:slug
         const response = await api.get(`/problems/${slug}`)
-        setProblem(response.data)
+        
+        // Backend returns { problem: {...} }, so we need to access response.data.problem
+        setProblem(response.data.problem || response.data)
         
       } catch (err: any) {
         console.error('Failed to fetch problem:', err)
@@ -120,19 +122,48 @@ export default function ProblemPage() {
    * 2. Listen for verdict via Socket.io
    * 3. Display the verdict in the UI
    */
-  const handleSubmit = () => {
-    console.log('=== SUBMISSION ===')
-    console.log('Problem:', problem?.title)
-    console.log('Language:', language)
-    console.log('Code:', code)
-    console.log('==================')
+  /**
+   * Handle code submission to the judge system
+   * 
+   * Submits code to POST /api/submissions endpoint
+   * Returns 202 Accepted and verdict comes via Socket.io
+   */
+  const handleSubmit = async () => {
+    if (!problem || !code.trim()) {
+      alert('Please write some code before submitting')
+      return
+    }
     
-    // Simulate judging state for UI testing
-    setIsJudging(true)
-    setTimeout(() => {
+    try {
+      setIsJudging(true)
+      
+      // Submit code to backend
+      const response = await api.post('/submissions/submit', {
+        problemId: problem._id,
+        code: code,
+        language: language,
+        // contestId: contestId // Optional: add if in contest mode
+      })
+      
+      console.log('Submission queued:', response.data)
+      
+      // TODO: Listen for verdict via Socket.io
+      // For now, simulate judging and show message
+      setTimeout(() => {
+        setIsJudging(false)
+        alert(`Submission queued! Submission ID: ${response.data.submissionId}\n\nNote: Real-time verdict updates via Socket.io are not yet implemented. Check the Submissions page to see your result.`)
+      }, 2000)
+      
+    } catch (err: any) {
+      console.error('Submission failed:', err)
       setIsJudging(false)
-      alert('Submission logged to console! Check the browser console.')
-    }, 2000)
+      
+      if (err.response?.status === 401) {
+        alert('Please log in to submit code')
+      } else {
+        alert(err.response?.data?.message || err.response?.data?.error || 'Failed to submit code. Please try again.')
+      }
+    }
   }
   
   // ============================================================================
@@ -164,7 +195,7 @@ export default function ProblemPage() {
       // Call the Express proxy endpoint (not direct to FastAPI)
       // This requires authentication and handles hint count validation
       const response = await api.post('/agent/hint', {
-        problem_id: problem.id,
+        problem_id: problem._id,
         problem_slug: problem.slug,
       })
       
@@ -180,10 +211,14 @@ export default function ProblemPage() {
       console.error('Failed to get hint:', err)
       
       // Handle specific error cases
-      if (err.response?.status === 403) {
+      if (err.response?.status === 401) {
+        setHintError('Please log in to get hints')
+      } else if (err.response?.status === 403) {
         setHintError("You've used all 3 hints for this problem")
+      } else if (err.response?.status === 503 || err.code === 'ECONNREFUSED') {
+        setHintError('AI service is currently unavailable. Please try again later.')
       } else {
-        setHintError(err.response?.data?.message || 'Failed to get hint. Please try again.')
+        setHintError(err.response?.data?.message || err.response?.data?.error || 'Failed to get hint. Please try again.')
       }
       
     } finally {
@@ -281,14 +316,16 @@ export default function ProblemPage() {
               {/* Difficulty Badge */}
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  problem.difficulty === 'easy'
+                  !problem.difficulty
+                    ? 'bg-gray-100 text-gray-800'
+                    : problem.difficulty === 'easy'
                     ? 'bg-green-100 text-green-800'
                     : problem.difficulty === 'medium'
                     ? 'bg-yellow-100 text-yellow-800'
                     : 'bg-red-100 text-red-800'
                 }`}
               >
-                {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+                {problem.difficulty?.charAt(0).toUpperCase() + problem.difficulty?.slice(1) || 'Unknown'}
               </span>
               
               {/* Time Limit */}

@@ -30,6 +30,7 @@ export interface SampleTestCase {
 
 export interface Problem {
   _id: string;
+  id?: string; // Optional alias for _id (used in some contexts)
   title: string;
   slug: string;
   description: string;
@@ -38,9 +39,9 @@ export interface Problem {
   memoryLimit: number; // megabytes
   difficulty: ProblemDifficulty;
   sampleTestCases: SampleTestCase[];
-  hiddenTestCasesS3Key: string | null;
+  hiddenTestCasesS3Key?: string | null;
   status: ProblemStatus;
-  rejectionReason: string | null;
+  rejectionReason?: string | null;
   authorId: string;
   createdAt: string;
   updatedAt: string;

@@ -1,14 +1,14 @@
 # Production overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
   api:
-    image: ghcr.io/your-org/codecourt-api:latest
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    image: ghcr.io/${GITHUB_ORG}/codecourt-api:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+      target: production
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -17,15 +17,22 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ai-service:
-    image: ghcr.io/your-org/codecourt-ai:latest
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    image: ghcr.io/${GITHUB_ORG}/codecourt-ai:${IMAGE_TAG:-latest}
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -34,31 +41,43 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mongo:
-    restart: always
-    command: ["mongod", "--quiet", "--setParameter", "diagnosticDataCollectionEnabled=false", "--wiredTigerEngineConfigString", "verbose=[checkpoint:0]"]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-
-  redis:
-    restart: always
-    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "900", "1"]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
           memory: 512M
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

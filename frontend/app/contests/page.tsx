@@ -22,8 +22,8 @@ export default function ContestsPage() {
         // Call GET /api/contests using our configured Axios instance
         const response = await api.get('/contests')
         
-        // Update state with the fetched contests
-        setContests(response.data)
+        // Update state with the fetched contests - validate it's an array
+        setContests(Array.isArray(response.data) ? response.data : [])
       } catch (err: any) {
         // Handle errors (network issues, 500 errors, etc.)
         setError(err.response?.data?.message || 'Failed to load contests')
@@ -38,6 +38,11 @@ export default function ContestsPage() {
 
   // Helper function to categorize contests by status
   const categorizeContests = () => {
+    // Type guard: ensure contests is an array before calling .filter()
+    if (!Array.isArray(contests)) {
+      return { upcoming: [], active: [], past: [] }
+    }
+
     const now = new Date()
 
     // Filter contests into three categories based on start/end times
