@@ -218,7 +218,7 @@ async function downloadTestCases(s3Key) {
       Key: s3Key
     });
     
-    const response = await s3Client.send(command);
+    await s3Client.send(command);
     
     // TODO: Implement ZIP extraction and parsing
     // For now, return sample test cases as placeholder

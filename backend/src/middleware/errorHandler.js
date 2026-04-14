@@ -92,7 +92,7 @@
  * @param {NextFunction} next - Express next function (unused in error handler)
  * @returns {void}
  */
-exports.errorHandler = (err, req, res, next) => {
+exports.errorHandler = (err, req, res, _next) => {
   // Log error to console for debugging
   // In production, this should be replaced with a logging service (Winston, Pino, etc.)
   console.error('Error:', err);

@@ -400,7 +400,7 @@
 - [x] 9.1.1 Write `.github/workflows/ci.yml` — trigger on PR
 - [x] 9.1.2 Add job: checkout, setup Node 20 + cache, `cd backend && npm ci && npm run lint && npm test`
 - [x] 9.1.3 Add job: setup Python 3.11 + cache, `cd ai-service && pip install -r requirements.txt && pytest`
-- [-] 9.1.4 Test CI: open PR → verify pipeline runs
+- [x] 9.1.4 Test CI: open PR → verify pipeline runs
 
 ### 9.2 Deploy Workflow — P4
 - [x] 9.2.1 Write `.github/workflows/deploy.yml` — trigger on push to main
@@ -421,7 +421,7 @@
 - [ ] 9.3.6 Add secret: `MONGODB_URI` (Atlas connection string)
 
 ### 9.4 CI/CD Testing — P4
-- [ ] 9.4.1 Test CI pipeline: open feature branch PR → verify lint + test pass
+- [x] 9.4.1 Test CI pipeline: open feature branch PR → verify lint + test pass
 - [-] 9.4.2 Test deploy pipeline: merge to main → verify images pushed to GHCR
 
 ---

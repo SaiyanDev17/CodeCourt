@@ -81,6 +81,7 @@ jobs:
       - name: Run tests
         working-directory: ai-service
         env:
+          PYTHONPATH: ${{ github.workspace }}/ai-service
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           EXPRESS_API_URL: http://localhost:5000
           PORT: 8000
