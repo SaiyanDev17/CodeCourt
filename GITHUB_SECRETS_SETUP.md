@@ -76,7 +76,7 @@ Once you've added `GHCR_TOKEN`, you can test the CI/CD pipeline:
 
 - ✅ CI Workflow configured
 - ✅ Deploy Workflow configured  
-- ✅ 4/6 secrets added
-- ⏳ GHCR_TOKEN needed
-- 🔮 KUBECONFIG_OKE for later
+- ✅ All required secrets added (5/5)
+- ✅ GHCR_TOKEN added
+- 🔮 KUBECONFIG_OKE for Phase 10-11
 
