@@ -14,7 +14,7 @@ jest.mock('ioredis', () => {
 });
 
 describe('Redis Configuration', () => {
-  let redisClient, closeRedis, consoleLogSpy, consoleErrorSpy, consoleWarnSpy;
+  let closeRedis, consoleLogSpy, consoleErrorSpy, consoleWarnSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -28,7 +28,6 @@ describe('Redis Configuration', () => {
     consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
     jest.resetModules();
     const redis = require('./redis');
-    redisClient = redis;
     closeRedis = redis.closeRedis;
   });
 

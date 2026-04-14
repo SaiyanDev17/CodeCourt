@@ -48,7 +48,7 @@ describe('Redis Unavailability Integration Tests', () => {
   describe('User Profile Operations', () => {
     it('should fetch user profile from MongoDB when Redis is down', async () => {
       // Create test user
-      const testUser = await User.create({
+      await User.create({
         username: 'redis-test-user',
         email: 'redis-test@example.com',
         passwordHash: 'hashed',
@@ -187,7 +187,6 @@ describe('Redis Unavailability Integration Tests', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       // Perform various operations
-      const userService = require('./users/service');
       const problemService = require('./problems/service');
       
       await problemService.listPublished();

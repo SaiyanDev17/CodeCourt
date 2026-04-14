@@ -69,6 +69,7 @@
 # HintResponse: Pydantic model that validates the outgoing JSON response
 # create_agent_executor: Factory function that creates our LangChain agent
 # ============================================================================
+from functools import lru_cache
 from fastapi import APIRouter, HTTPException
 from app.models.schemas import HintRequest, HintResponse
 from app.agent.executor import create_agent_executor
@@ -145,7 +146,10 @@ router = APIRouter(
 # This line runs when the module is first imported (e.g., in main.py).
 # It's similar to initializing a database connection pool at startup.
 # ============================================================================
-agent_executor = create_agent_executor()
+@lru_cache(maxsize=1)
+def get_agent_executor():
+    """Create and cache the agent executor (singleton pattern)."""
+    return create_agent_executor()
 
 
 # ============================================================================
@@ -344,6 +348,9 @@ async def generate_hint(request: HintRequest) -> HintResponse:
     # 5. Return the final response
     # ========================================================================
     try:
+        # Get the lazily-initialized agent executor
+        agent_executor = get_agent_executor()
+        
         # Invoke the agent with the user input in message format
         result = await agent_executor.ainvoke({
             "messages": [{"role": "user", "content": user_input}]
