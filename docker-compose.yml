@@ -72,7 +72,7 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "900", "1"]
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction", "--save", "900", "1"]
     logging:
       driver: "json-file"
       options:
