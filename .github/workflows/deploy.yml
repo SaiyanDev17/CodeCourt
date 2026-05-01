@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+      - develop
+      - test/verify-ci-pipeline
+  pull_request:
+    branches:
+      - main
+      - develop
+      - test/verify-ci-pipeline
 
 jobs:
   test:
@@ -12,6 +19,8 @@ jobs:
   build-and-deploy:
     needs: test
     runs-on: ubuntu-latest
+    env:
+      KUBECONFIG_OKE: ${{ secrets.KUBECONFIG_OKE }}
 
     steps:
       - name: Checkout code
@@ -45,7 +54,7 @@ jobs:
           docker push ghcr.io/${{ github.repository_owner }}/codecourt-judge-python:${{ github.sha }}
 
       - name: Deploy to Kubernetes
-        if: secrets.KUBECONFIG_OKE != ''
+        if: env.KUBECONFIG_OKE != ''
         env:
           KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_OKE }}
         run: |
