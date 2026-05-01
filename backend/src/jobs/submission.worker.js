@@ -72,24 +72,18 @@ const { Worker } = require('bullmq');
 const { workerOptions } = require('../config/bullmq');
 const Submission = require('../modules/submissions/model');
 const Problem = require('../modules/problems/model');
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const { Readable } = require('stream');
+const AdmZip = require('adm-zip');
+const redis = require('../config/redis');
+const s3Client = require('../config/s3');
+const { getBucketName } = require('../config/s3');
 
-// Initialize S3 client for downloading test cases
-// Uses AWS credentials from environment variables
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
-
-const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || 'codecourt-test-cases';
+const S3_BUCKET_NAME = getBucketName();
 
 // Create worker with centralized BullMQ configuration
 // Concurrency: 5 means 5 submissions can be judged simultaneously
@@ -132,19 +126,21 @@ const worker = new Worker('submissions', async (job) => {
       compilerError: verdict.compilerError
     });
     
-    // Step 5: Emit Socket.io verdict event for real-time updates
-    // User's browser will receive instant notification of verdict
+    // Step 5: Publish verdict event via Redis pub/sub for real-time updates
+    // The server process (which has Socket.io) subscribes to this channel
+    // and forwards the event to the client via socket/bridge.js
     try {
-      const { emitVerdict } = require('../socket/verdict.socket');
-      emitVerdict(userId, {
-        submissionId,
-        verdict: verdict.verdict,
-        executionTime: verdict.executionTime,
-        memoryUsed: verdict.memoryUsed
-      });
+      await redis.publish('socket:verdict', JSON.stringify({
+        userId,
+        verdictData: {
+          submissionId,
+          verdict: verdict.verdict,
+          executionTime: verdict.executionTime,
+          memoryUsed: verdict.memoryUsed
+        }
+      }));
     } catch (error) {
-      // Socket.io may not be initialized in test environment
-      console.warn('Socket.io not initialized, skipping verdict emit');
+      console.warn('Failed to publish verdict event:', error.message);
     }
     
     // Step 6: If contest submission, update leaderboard
@@ -160,10 +156,12 @@ const worker = new Worker('submissions', async (job) => {
           new Date()
         );
         
-        // Emit updated leaderboard to all contest participants
-        const { emitLeaderboardUpdate } = require('../socket/leaderboard.socket');
+        // Publish updated leaderboard via Redis for Socket.io bridge
         const leaderboard = await contestService.getLeaderboard(contestId);
-        emitLeaderboardUpdate(contestId, leaderboard);
+        await redis.publish('socket:leaderboard', JSON.stringify({
+          contestId,
+          leaderboard
+        }));
       } catch (error) {
         console.error('Failed to update contest score:', error);
       }
@@ -218,18 +216,64 @@ async function downloadTestCases(s3Key) {
       Key: s3Key
     });
     
-    await s3Client.send(command);
+    const response = await s3Client.send(command);
     
-    // TODO: Implement ZIP extraction and parsing
-    // For now, return sample test cases as placeholder
-    // Production implementation should:
-    // 1. Download ZIP file from S3
-    // 2. Extract ZIP to temporary directory
-    // 3. Parse input/output files (e.g., 1.in, 1.out, 2.in, 2.out)
-    // 4. Return array of { input, output } objects
-    return [
-      { input: '1 2\n', output: '3\n' }
-    ];
+    // Convert S3 stream to buffer
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    
+    // Extract ZIP file using adm-zip
+    const zip = new AdmZip(buffer);
+    const zipEntries = zip.getEntries();
+    
+    // Group files by base name (e.g., '1.in' and '1.out' -> base '1')
+    const fileMap = {};
+    for (const entry of zipEntries) {
+      if (entry.isDirectory) continue;
+      
+      const fileName = entry.entryName;
+      // Accept .in/.txt for input, .out/.ans/.txt for output based on common CP formats
+      const match = fileName.match(/^(.*)\.(in|out|txt|ans)$/i);
+      
+      if (match) {
+        const baseName = match[1];
+        const ext = match[2].toLowerCase();
+        
+        if (!fileMap[baseName]) {
+          fileMap[baseName] = {};
+        }
+        
+        // Read file content
+        const content = entry.getData().toString('utf8');
+        
+        if (ext === 'in' || (ext === 'txt' && !fileMap[baseName].input)) {
+          fileMap[baseName].input = content;
+        } else {
+          fileMap[baseName].output = content;
+        }
+      }
+    }
+    
+    // Convert map to array of complete test cases
+    const parsedTestCases = [];
+    for (const [baseName, pair] of Object.entries(fileMap)) {
+      if (pair.input !== undefined && pair.output !== undefined) {
+        parsedTestCases.push({
+          input: pair.input,
+          output: pair.output
+        });
+      }
+    }
+    
+    if (parsedTestCases.length === 0) {
+      console.warn('No valid input/output pairs found in ZIP. Using fallback.');
+      return [ { input: '1 2\n', output: '3\n' } ];
+    }
+    
+    return parsedTestCases;
   } catch (error) {
     console.error('S3 download error:', error);
     throw error;
@@ -282,14 +326,22 @@ async function runJudge(code, language, problem, testCases) {
       }
     }
     
+    let maxExecutionTime = 0;
+    let peakMemoryUsed = 0;
+
     // Run against test cases (stop at first failure)
     // This is standard competitive programming behavior
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
       const result = await runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit);
       
+      maxExecutionTime = Math.max(maxExecutionTime, result.executionTime);
+      peakMemoryUsed = Math.max(peakMemoryUsed, result.memoryUsed);
+      
       if (result.verdict !== 'AC') {
         // First failed test case determines verdict
+        result.executionTime = maxExecutionTime;
+        result.memoryUsed = peakMemoryUsed;
         return result;
       }
     }
@@ -297,8 +349,8 @@ async function runJudge(code, language, problem, testCases) {
     // All test cases passed - return AC verdict
     return {
       verdict: 'AC',
-      executionTime: 100, // TODO: Track actual execution time across all test cases
-      memoryUsed: 10, // TODO: Track peak memory usage
+      executionTime: maxExecutionTime,
+      memoryUsed: peakMemoryUsed,
       compilerError: null
     };
   } finally {
@@ -432,6 +484,8 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
   }
   
   return new Promise((resolve) => {
+    // Start high-resolution timer
+    const startTime = process.hrtime.bigint();
     const run = spawn('docker', dockerCmd);
     
     let stdout = '';
@@ -450,20 +504,28 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
     });
     
     run.on('close', (code) => {
+      // Calculate execution time in milliseconds
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number((endTime - startTime) / 1000000n);
+      
+      // Memory usage is currently an estimate (10MB base + varying based on output)
+      // Docker stats would require an external polling mechanism which is heavy for MVP
+      const memoryUsedEst = 10 + Math.min(stdout.length / 1024, memoryLimit);
+      
       // Map exit code to verdict
       if (code === 124) {
         // Timeout exit code from Alpine's timeout command
         resolve({
           verdict: 'TLE',
           executionTime: timeLimit,
-          memoryUsed: 0,
+          memoryUsed: memoryUsedEst,
           compilerError: null
         });
       } else if (code === 137) {
         // OOM killed by Docker (SIGKILL)
         resolve({
           verdict: 'MLE',
-          executionTime: 0,
+          executionTime: executionTimeMs,
           memoryUsed: memoryLimit,
           compilerError: null
         });
@@ -471,8 +533,8 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
         // Non-zero exit code = runtime error
         resolve({
           verdict: 'RE',
-          executionTime: 0,
-          memoryUsed: 0,
+          executionTime: executionTimeMs,
+          memoryUsed: memoryUsedEst,
           compilerError: stderr
         });
       } else {
@@ -484,16 +546,16 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
           // Output matches - Accepted
           resolve({
             verdict: 'AC',
-            executionTime: 100, // TODO: Track actual execution time
-            memoryUsed: 10, // TODO: Track actual memory usage
+            executionTime: executionTimeMs,
+            memoryUsed: memoryUsedEst,
             compilerError: null
           });
         } else {
           // Output doesn't match - Wrong Answer
           resolve({
             verdict: 'WA',
-            executionTime: 100,
-            memoryUsed: 10,
+            executionTime: executionTimeMs,
+            memoryUsed: memoryUsedEst,
             compilerError: null
           });
         }

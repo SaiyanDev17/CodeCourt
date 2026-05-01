@@ -148,3 +148,42 @@ exports.saveHint = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get submission history for AI service
+ * GET /api/agent/submissions?user_id=...&problem_id=...
+ * 
+ * Called internally by the AI service to fetch user submissions.
+ */
+exports.getSubmissionHistory = async (req, res, next) => {
+  try {
+    const { user_id, problem_id } = req.query;
+    
+    if (!user_id || !problem_id) {
+      return res.status(400).json({ 
+        error: 'Missing required query parameters: user_id and problem_id' 
+      });
+    }
+
+    // Require the Submission model dynamically or add to top
+    const Submission = require('../submissions/model');
+
+    const submissions = await Submission.find({ 
+      userId: user_id, 
+      problemId: problem_id 
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      count: submissions.length,
+      submissions: submissions.map(sub => ({
+        verdict: sub.verdict,
+        executionTime: sub.executionTime,
+        memoryUsed: sub.memoryUsed,
+        compilerError: sub.compilerError,
+        createdAt: sub.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};

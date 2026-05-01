@@ -213,8 +213,8 @@ async def get_submission_history(user_id: str, problem_id: str) -> dict:
         #   - params= works the same as axios
         # ====================================================================
         response = await client.get(
-            f"{settings.EXPRESS_API_URL}/api/submissions/problem/{problem_id}",
-            params={"userId": user_id}
+            f"{settings.EXPRESS_API_URL}/api/agent/submissions",
+            params={"user_id": user_id, "problem_id": problem_id}
         )
         
         # ====================================================================

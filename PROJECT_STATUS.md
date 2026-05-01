@@ -1,7 +1,7 @@
 # CodeCourt MVP - Project Status
 
-**Last Updated:** 2026-04-14
-**Generated:** 14/4/2026, 4:02:00 pm
+**Last Updated:** 2026-05-01
+**Generated:** 1/5/2026, 9:01:07 pm
 
 ## 📊 Overall Progress
 
@@ -64,11 +64,12 @@ Progress: [███████████████████████
 ## 🔌 API Health Map
 
 ### Agent Module
-**Endpoints:** 3
+**Endpoints:** 4
 
 - `POST` /api/agent/hint
 - `GET` /api/agent/hint-count
 - `POST` /api/agent/save-hint
+- `GET` /api/agent/submissions
 
 ### Auth Module
 **Endpoints:** 4

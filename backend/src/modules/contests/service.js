@@ -230,7 +230,7 @@ class ContestService {
     }
     
     // Check if already registered (prevent duplicates)
-    if (contest.participants.includes(userId)) {
+    if (contest.participants.some(p => p.toString() === userId.toString())) {
       return { message: 'Already registered' };
     }
     
@@ -347,13 +347,12 @@ class ContestService {
       // Calculate penalty: 20 points per wrong attempt + solve time in minutes
       // Example: 2 WA + AC at 45min = 20*2 + 45 = 85 penalty
       problemScore.penalty = 20 * problemScore.attempts + minutesElapsed;
-    } else if (verdict === 'WA') {
-      // Wrong Answer: Increment attempts only if not already solved
+    } else if (verdict !== 'AC') {
+      // Non-AC verdicts (WA, TLE, MLE, RE, CE) increment attempts
       if (!problemScore.solved) {
         problemScore.attempts += 1;
       }
     }
-    // Other verdicts (TLE, MLE, RE, CE) are ignored for scoring
     
     // Recalculate total score using ICPC algorithm
     contestScore.totalScore = this.computeIcpcScore(contestScore.problemScores);

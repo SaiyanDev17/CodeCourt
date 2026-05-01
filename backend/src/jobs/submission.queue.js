@@ -96,7 +96,7 @@ const submissionQueue = new Queue('submissions', queueOptions);
  *   contestId: '507f1f77bcf86cd799439014'
  * });
  */
-exports.enqueueSubmission = async (submissionData) => {
+async function enqueueSubmission(submissionData) {
   // Use submissionId as jobId to prevent duplicate job creation
   // If a job with this ID already exists, BullMQ will reject the duplicate
   const job = await submissionQueue.add('judge', submissionData, {
@@ -104,7 +104,7 @@ exports.enqueueSubmission = async (submissionData) => {
   });
   
   return job;
-};
+}
 
 /**
  * Get job status and progress
@@ -123,14 +123,18 @@ exports.enqueueSubmission = async (submissionData) => {
  * // Or: { state: 'active', progress: 50 }
  * // Or: null (job not found)
  */
-exports.getJobStatus = async (jobId) => {
+async function getJobStatus(jobId) {
   const job = await submissionQueue.getJob(jobId);
   if (!job) return null;
   
   // Get current job state from Redis
   const state = await job.getState();
   return { state, progress: job.progress };
-};
+}
 
-// Export queue instance for direct access (e.g., monitoring, admin tools)
-module.exports = submissionQueue;
+// Single unified export — queue instance + helper functions
+module.exports = {
+  submissionQueue,
+  enqueueSubmission,
+  getJobStatus
+};
