@@ -282,12 +282,6 @@ router.post(
  * - 404 Not Found: Submission doesn't exist
  * - 500 Internal Server Error: Database failure
  */
-router.get(
-  '/:id',
-  authGuard,
-  submissionsController.getSubmission
-);
-
 /**
  * GET /api/submissions/problem/:problemId
  * 
@@ -335,6 +329,8 @@ router.get(
  * - No pagination in MVP (acceptable for <100 submissions per problem)
  * - Code is NOT included in list response (only in detail view)
  * - Sorted by createdAt descending (most recent first)
+ * - IMPORTANT: This route is declared BEFORE /:id to prevent Express
+ *   from matching "problem" as an :id parameter
  * 
  * ERROR RESPONSES:
  * - 401 Unauthorized: Missing/invalid JWT token
@@ -346,6 +342,30 @@ router.get(
   '/problem/:problemId',
   authGuard,
   submissionsController.getSubmissionsByProblem
+);
+
+/**
+ * GET /api/submissions/:id
+ * 
+ * Get a single submission by its MongoDB ObjectId.
+ * Returns full submission details including source code, verdict, and execution metrics.
+ * 
+ * AUTHENTICATION: Required (authGuard)
+ * AUTHORIZATION: Owner only (service layer validates submission.userId === req.user.id)
+ * 
+ * NOTE: This catch-all parameter route is declared AFTER /problem/:problemId
+ * to prevent it from intercepting more specific paths.
+ * 
+ * ERROR RESPONSES:
+ * - 401 Unauthorized: Missing/invalid JWT token
+ * - 403 Forbidden: Submission belongs to another user
+ * - 404 Not Found: Submission doesn't exist
+ * - 500 Internal Server Error: Database failure
+ */
+router.get(
+  '/:id',
+  authGuard,
+  submissionsController.getSubmission
 );
 
 module.exports = router;

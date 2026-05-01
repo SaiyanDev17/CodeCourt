@@ -82,7 +82,7 @@ class ProblemsController {
 
       // Don't expose S3 key to non-owners (security)
       // Only problem author can see hiddenTestCasesS3Key
-      if (!req.user || problem.authorId._id.toString() !== req.user.id) {
+      if (!req.user || problem.authorId?._id?.toString() !== req.user.id) {
         delete problem.hiddenTestCasesS3Key;
       }
       
@@ -124,8 +124,9 @@ class ProblemsController {
       const { id } = req.params;
       const updateData = req.body;
       const userId = req.user.id; // From authGuard middleware
+      const userRole = req.user.role;
       
-      const problem = await problemService.update(id, updateData, userId);
+      const problem = await problemService.update(id, updateData, userId, userRole);
       
       res.json({
         message: 'Problem updated successfully',
@@ -146,6 +147,7 @@ class ProblemsController {
     try {
       const { id } = req.params;
       const userId = req.user.id; // From authGuard middleware
+      const userRole = req.user.role;
       
       // Check if file was uploaded (multer middleware)
       if (!req.file) {
@@ -157,7 +159,7 @@ class ProblemsController {
         return res.status(400).json({ error: 'File must be a ZIP archive' });
       }
       
-      const result = await problemService.uploadTestCases(id, req.file.buffer, userId);
+      const result = await problemService.uploadTestCases(id, req.file.buffer, userId, userRole);
       
       res.json({
         message: 'Test cases uploaded successfully',

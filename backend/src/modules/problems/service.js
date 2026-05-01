@@ -83,18 +83,11 @@
 
 const Problem = require('./model');
 const redis = require('../../config/redis');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const s3Client = require('../../config/s3');
+const { getBucketName } = require('../../config/s3');
 
-// S3 client configuration
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
-
-const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || 'codecourt-test-cases';
+const S3_BUCKET_NAME = getBucketName();
 const CACHE_TTL = 60; // 60 seconds (balance between freshness and performance)
 
 class ProblemService {
@@ -239,7 +232,7 @@ class ProblemService {
    * - Requires re-approval from admin
    * - Why? Test case changes affect correctness, need review
    */
-  async update(problemId, updateData, userId) {
+  async update(problemId, updateData, userId, userRole) {
     // Find problem by ID
     const problem = await Problem.findById(problemId);
     
@@ -249,8 +242,8 @@ class ProblemService {
       throw error;
     }
 
-    // Verify ownership (only author can update)
-    if (problem.authorId.toString() !== userId) {
+    // Verify ownership (only author or admin can update)
+    if (problem.authorId.toString() !== userId && userRole !== 'admin') {
       const error = new Error('Not authorized to update this problem');
       error.statusCode = 403; // HTTP 403 Forbidden
       throw error;
@@ -302,7 +295,7 @@ class ProblemService {
    * - S3 keys are not exposed to non-owners
    * - Judge system uses S3 key to download test cases
    */
-  async uploadTestCases(problemId, zipBuffer, userId) {
+  async uploadTestCases(problemId, zipBuffer, userId, userRole) {
     // Find problem by ID
     const problem = await Problem.findById(problemId);
     
@@ -312,8 +305,8 @@ class ProblemService {
       throw error;
     }
 
-    // Verify ownership (only author can upload test cases)
-    if (problem.authorId.toString() !== userId) {
+    // Verify ownership (only author or admin can upload test cases)
+    if (problem.authorId.toString() !== userId && userRole !== 'admin') {
       const error = new Error('Not authorized to upload test cases for this problem');
       error.statusCode = 403;
       throw error;

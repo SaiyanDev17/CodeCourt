@@ -1,0 +1,21 @@
+Subject: Re: Morph Systems Internship Interview - Technical Challenges
+
+Hi Akshay,
+
+Thank you for the interview invitation! I'm excited to discuss my experience with CodeCourt.
+
+Regarding the technical challenges:
+
+**Challenge 1: Backend Infrastructure Restart Loop**
+Our Node.js backend was stuck in an infinite restart loop, blocking all development. I debugged Docker container logs and found three interconnected issues: Mongoose duplicate index warnings (we'd defined indexes both at field-level and explicitly), Redis configured with wrong eviction policy for our job queue (BullMQ), and Nodemon reacting to these warnings. I fixed all three - removed duplicate indexes, changed Redis to `noeviction` policy, and configured Nodemon properly. This taught me to deeply understand infrastructure dependencies and match configurations to application requirements.
+
+**Challenge 2: Asynchronous Judge Engine with BullMQ**
+Building the code submission judging system required designing a reliable asynchronous architecture. Users submit code, and we need to compile, execute against test cases, and return verdicts - all while handling concurrent submissions and preventing resource exhaustion. I implemented a BullMQ job queue with Redis as the backing store, where submissions are enqueued immediately (returning 202 Accepted), then workers dequeue jobs, spawn isolated Docker containers for each language (C++/Python), execute with strict timeouts and memory limits, map exit codes to verdicts (AC/WA/TLE/MLE/RE/CE), and emit real-time results via Socket.io. The critical insight was matching Redis eviction policy to BullMQ's requirements - `noeviction` instead of `allkeys-lru` to prevent silent job data loss. This taught me that distributed systems require careful infrastructure configuration and understanding of component dependencies.
+
+**User Growth Strategy:**
+These challenges taught me that growth requires infrastructure reliability (users won't return if unstable), graceful error handling, and proactive monitoring. For CodeCourt, I'd focus on bulletproof onboarding, real-time features (Socket.io for live contests), social features (leaderboards, sharing), and integration with university CS programs for initial user base.
+
+Looking forward to our conversation!
+
+Best regards,
+[Your Name]

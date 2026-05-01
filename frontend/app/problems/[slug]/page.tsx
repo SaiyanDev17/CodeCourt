@@ -138,7 +138,7 @@ export default function ProblemPage() {
       setIsJudging(true)
       
       // Submit code to backend
-      const response = await api.post('/submissions/submit', {
+      const response = await api.post('/submissions', {
         problemId: problem._id,
         code: code,
         language: language,

@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+      - develop
+      - test/verify-ci-pipeline
+  pull_request:
+    branches:
+      - main
+      - develop
+      - test/verify-ci-pipeline
 
 jobs:
   test:
@@ -12,6 +19,8 @@ jobs:
   build-and-deploy:
     needs: test
     runs-on: ubuntu-latest
+    env:
+      KUBECONFIG_OKE: ${{ secrets.KUBECONFIG_OKE }}
 
     steps:
       - name: Checkout code
@@ -26,26 +35,34 @@ jobs:
 
       - name: Build and push API image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/codecourt-api:${{ github.sha }} -f backend/docker/Dockerfile backend/
-          docker push ghcr.io/${{ github.repository_owner }}/codecourt-api:${{ github.sha }}
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_ID=ghcr.io/$REPO_OWNER/codecourt-api
+          docker build -t $IMAGE_ID:${{ github.sha }} -f backend/docker/Dockerfile backend/
+          docker push $IMAGE_ID:${{ github.sha }}
 
       - name: Build and push AI service image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/codecourt-ai:${{ github.sha }} ai-service/
-          docker push ghcr.io/${{ github.repository_owner }}/codecourt-ai:${{ github.sha }}
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_ID=ghcr.io/$REPO_OWNER/codecourt-ai
+          docker build -t $IMAGE_ID:${{ github.sha }} ai-service/
+          docker push $IMAGE_ID:${{ github.sha }}
 
       - name: Build and push C++ judge image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/codecourt-judge-cpp:${{ github.sha }} backend/docker/judges/cpp/
-          docker push ghcr.io/${{ github.repository_owner }}/codecourt-judge-cpp:${{ github.sha }}
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_ID=ghcr.io/$REPO_OWNER/codecourt-judge-cpp
+          docker build -t $IMAGE_ID:${{ github.sha }} backend/docker/judges/cpp/
+          docker push $IMAGE_ID:${{ github.sha }}
 
       - name: Build and push Python judge image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/codecourt-judge-python:${{ github.sha }} backend/docker/judges/python/
-          docker push ghcr.io/${{ github.repository_owner }}/codecourt-judge-python:${{ github.sha }}
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_ID=ghcr.io/$REPO_OWNER/codecourt-judge-python
+          docker build -t $IMAGE_ID:${{ github.sha }} backend/docker/judges/python/
+          docker push $IMAGE_ID:${{ github.sha }}
 
       - name: Deploy to Kubernetes
-        if: ${{ secrets.KUBECONFIG_OKE != '' }}
+        if: env.KUBECONFIG_OKE != ''
         env:
           KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_OKE }}
         run: |

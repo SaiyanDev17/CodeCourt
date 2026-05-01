@@ -175,7 +175,7 @@ class AuthService {
     // Generate access token (short-lived, 15 minutes)
     // Payload includes userId and role for authorization
     const accessToken = jwt.sign(
-      { userId: user._id.toString(), role: user.role },
+      { userId: user._id.toString(), username: user.username, role: user.role },
       ACCESS_TOKEN_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
@@ -274,7 +274,7 @@ class AuthService {
     
     // Generate new access token with current role
     const accessToken = jwt.sign(
-      { userId: decoded.userId, role: user.role },
+      { userId: decoded.userId, username: user.username, role: user.role },
       ACCESS_TOKEN_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
