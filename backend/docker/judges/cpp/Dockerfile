@@ -1,10 +1,10 @@
 # C++ Judge Docker Image
-FROM gcc:13-alpine
+FROM alpine:3.19
 
 WORKDIR /sandbox
 
-# Install timeout utility
-RUN apk add --no-cache coreutils
+# Install g++ compiler and timeout utility
+RUN apk add --no-cache g++ coreutils
 
 # Copy judge script
 COPY judge.sh /judge.sh
