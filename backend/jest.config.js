@@ -14,5 +14,7 @@ module.exports = {
     'integration.test.js'
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testTimeout: 10000
+  testTimeout: 10000,
+  forceExit: true,
+  detectOpenHandles: false,
 };
