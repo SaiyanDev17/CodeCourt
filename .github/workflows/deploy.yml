@@ -45,7 +45,7 @@ jobs:
           docker push ghcr.io/${{ github.repository_owner }}/codecourt-judge-python:${{ github.sha }}
 
       - name: Deploy to Kubernetes
-        if: ${{ secrets.KUBECONFIG_OKE != '' }}
+        if: secrets.KUBECONFIG_OKE != ''
         env:
           KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_OKE }}
         run: |
