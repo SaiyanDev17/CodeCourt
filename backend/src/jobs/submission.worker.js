@@ -386,7 +386,7 @@ async function compileCode(tmpDir) {
       '--rm',
       '-v', `${tmpDir}:/sandbox`,
       '-w', '/sandbox',
-      'gcc:13-alpine',
+      'gcc:13',
       'g++',
       '-O2',
       '-std=c++17',
@@ -460,7 +460,7 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
       '--cpus', '1', // CPU limit
       '-v', `${tmpDir}:/sandbox`,
       '-w', '/sandbox',
-      'gcc:13-alpine',
+      'gcc:13',
       'timeout', // Use Alpine's timeout command
       `${timeLimitSeconds}s`,
       './solution'
