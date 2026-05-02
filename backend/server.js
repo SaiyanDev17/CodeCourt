@@ -6,6 +6,7 @@ const { connectDB } = require('./src/config/db');
 const { initSocket } = require('./src/socket');
 const { initSocketBridge } = require('./src/socket/bridge');
 const { startContestCron } = require('./src/cron/contest.cron');
+const submissionWorker = require('./src/jobs/submission.worker');
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,6 +24,9 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDB();
     console.log('✓ MongoDB connected');
+    
+    // Start submission worker
+    console.log('✓ Submission worker started');
     
     // Start contest cron job
     startContestCron();
@@ -42,8 +46,15 @@ const startServer = async () => {
 };
 
 // Handle graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
+  
+  // Close worker first to finish in-flight jobs
+  if (submissionWorker) {
+    await submissionWorker.close();
+    console.log('Worker closed');
+  }
+  
   server.close(() => {
     console.log('Server closed');
     process.exit(0);

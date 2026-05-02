@@ -199,11 +199,11 @@ export default function ProblemPage() {
         problem_slug: problem.slug,
       })
       
-      // Response format: { hint_text: string, hints_used: number }
-      const { hint_text, hints_used } = response.data
+      // Response format: { hint: string, hints_used: number }
+      const { hint, hints_used } = response.data
       
       // Update state
-      setHintText(hint_text)
+      setHintText(hint)
       setHintsRemaining(3 - hints_used)
       setShowHintPanel(true)
       
