@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 # Build Judge Docker Images
 # 
 # This script builds the custom Docker images for C++ and Python judges.
@@ -17,13 +17,13 @@ echo ""
 
 # Build C++ Judge Image
 echo "📦 Building C++ Judge Image (codecourt-judge-cpp)..."
-docker build -t codecourt-judge-cpp backend/docker/judges/cpp/
+docker build -t codecourt-judge-cpp -f backend/docker/judges/cpp/Dockerfile backend/docker/judges/cpp/
 echo "✅ C++ Judge Image built successfully"
 echo ""
 
 # Build Python Judge Image
 echo "📦 Building Python Judge Image (codecourt-judge-python)..."
-docker build -t codecourt-judge-python backend/docker/judges/python/
+docker build -t codecourt-judge-python -f backend/docker/judges/python/Dockerfile backend/docker/judges/python/
 echo "✅ Python Judge Image built successfully"
 echo ""
 

@@ -35,7 +35,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '@/lib/api'
 import { getSocket, connectSocket, isSocketConnected } from '@/lib/socket'
 import { useAuthStore } from '@/store/auth.store'
@@ -45,6 +45,12 @@ import type {
   SubmissionVerdict,
   VerdictEvent 
 } from '@/types'
+
+interface SubmitResponse {
+  message: string
+  submissionId: string
+  status: string
+}
 
 /**
  * Submission State Interface
@@ -120,6 +126,27 @@ interface UseSubmissionReturn {
    * Call this when user navigates away or starts a new submission
    */
   reset: () => void
+  
+  /**
+   * Check Status function - manually fetch verdict
+   * Call this when polling times out or user wants to refresh
+   */
+  checkStatus: () => Promise<void>
+  
+  /**
+   * Polling state flag
+   * - true when actively polling for verdict
+   * - false when not polling
+   */
+  isPolling: boolean
+  
+  /**
+   * Number of polling attempts made
+   * - 0 when not polling
+   * - Increments with each poll attempt
+   * - Max: 30 attempts
+   */
+  pollingAttempts: number
 }
 
 /**
@@ -147,9 +174,17 @@ export function useSubmission(): UseSubmissionReturn {
   const [isJudging, setIsJudging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
+  // Polling state
+  const [isPolling, setIsPolling] = useState(false)
+  const [pollingAttempts, setPollingAttempts] = useState(0)
+  
   // Get user and token from auth store
   const user = useAuthStore((state) => state.user)
   const accessToken = useAuthStore((state) => state.accessToken)
+  
+  // CRITICAL FIX: Use ref to track current submission ID
+  // This prevents stale closure issues in the Socket.io event handler
+  const currentSubmissionIdRef = useRef<string | null>(null)
   
   // ==========================================================================
   // SOCKET.IO CONNECTION SETUP
@@ -163,6 +198,10 @@ export function useSubmission(): UseSubmissionReturn {
    * 2. Connects to Socket.io with JWT token
    * 3. Sets up event listener for 'verdict' events
    * 4. Cleans up on unmount
+   * 
+   * IMPORTANT: We use useEffect with minimal dependencies to avoid
+   * re-registering the event listener on every state change.
+   * The handler uses state setters which are stable across renders.
    */
   useEffect(() => {
     // Only connect if user is authenticated
@@ -172,6 +211,7 @@ export function useSubmission(): UseSubmissionReturn {
     
     // Connect to Socket.io if not already connected
     if (!isSocketConnected()) {
+      console.log('[useSubmission] Connecting to Socket.io...')
       connectSocket(accessToken)
     }
     
@@ -195,29 +235,71 @@ export function useSubmission(): UseSubmissionReturn {
      * })
      * ```
      * 
-     * This handler receives the event and updates React state
+     * This handler receives the event and updates React state.
+     * 
+     * CRITICAL FIX: We use a callback pattern with setCurrentSubmission
+     * to access the latest currentSubmission value without adding it
+     * to the dependency array. This prevents the event listener from
+     * being re-registered on every submission.
      */
-    const handleVerdict = (data: VerdictEvent) => {
-      console.log('[useSubmission] Received verdict:', data)
+    const handleVerdict = async (data: VerdictEvent) => {
+      console.log('[useSubmission] Received verdict event:', {
+        submissionId: data.submissionId,
+        verdict: data.verdict,
+        executionTime: data.executionTime,
+        memoryUsed: data.memoryUsed,
+        hasCompilerError: !!data.compilerError
+      })
       
-      // Only update if this verdict is for the current submission
-      // This prevents race conditions if user submits multiple times quickly
-      if (currentSubmission && data.submissionId === currentSubmission._id) {
-        // Update verdict state
-        setVerdict(data.verdict)
-        setExecutionTime(data.executionTime)
-        setMemoryUsed(data.memoryUsed)
-        setCompilerError(data.compilerError)
-        
-        // Stop judging spinner
-        setIsJudging(false)
-        
-        // Clear any previous errors
-        setError(null)
+      // CRITICAL FIX: Use ref instead of state callback
+      // Check if this verdict is for the current submission
+      const currentId = currentSubmissionIdRef.current
+      
+      if (!currentId) {
+        console.log('[useSubmission] No current submission, ignoring verdict')
+        return
+      }
+      
+      if (data.submissionId !== currentId) {
+        console.log('[useSubmission] Verdict is for different submission, ignoring', {
+          expected: currentId,
+          received: data.submissionId
+        })
+        return
+      }
+      
+      console.log('[useSubmission] Verdict matches current submission, updating state')
+      
+      // Update verdict state
+      setVerdict(data.verdict)
+      setExecutionTime(data.executionTime)
+      setMemoryUsed(data.memoryUsed)
+      setCompilerError(data.compilerError ?? null)
+      
+      // Stop judging spinner
+      setIsJudging(false)
+      
+      // Clear any previous errors
+      setError(null)
+
+      // The running backend/worker may emit only the verdict metrics. Fetch the
+      // saved submission once judging finishes so compiler/runtime output is not lost.
+      try {
+        const response = await api.get<{ submission: Submission }>(`/submissions/${data.submissionId}`)
+        const submission = response.data.submission
+
+        setVerdict(submission.verdict)
+        setExecutionTime(submission.executionTime)
+        setMemoryUsed(submission.memoryUsed)
+        setCompilerError(submission.compilerError ?? null)
+        setCurrentSubmission(submission)
+      } catch (err) {
+        console.error('[useSubmission] Failed to refresh completed submission:', err)
       }
     }
     
     // Register the event listener
+    console.log('[useSubmission] Registering verdict event listener')
     socket.on('verdict', handleVerdict)
     
     // ========================================================================
@@ -227,7 +309,7 @@ export function useSubmission(): UseSubmissionReturn {
     /**
      * This cleanup function runs when:
      * 1. Component unmounts
-     * 2. Dependencies change (user, accessToken, currentSubmission)
+     * 2. Dependencies change (user, accessToken)
      * 
      * It removes the event listener to prevent memory leaks
      * 
@@ -238,9 +320,131 @@ export function useSubmission(): UseSubmissionReturn {
      * - This causes bugs and memory leaks
      */
     return () => {
+      console.log('[useSubmission] Cleaning up verdict event listener')
       socket.off('verdict', handleVerdict)
     }
-  }, [user, accessToken, currentSubmission])
+  }, [user, accessToken]) // Removed currentSubmission from dependencies
+  
+  // ==========================================================================
+  // POLLING FALLBACK MECHANISM
+  // ==========================================================================
+  
+  /**
+   * Effect: Poll for verdict when Socket.io connection fails
+   * 
+   * This effect implements the polling fallback mechanism:
+   * 1. Detects when Socket.io connection is lost
+   * 2. Starts polling GET /api/submissions/:id every 2 seconds
+   * 3. Stops polling when verdict is received or timeout occurs
+   * 4. Switches back to Socket.io when connection is restored
+   * 
+   * Polling Configuration:
+   * - Interval: 2 seconds (2000ms)
+   * - Max attempts: 30 (60 seconds total)
+   * - Timeout error after max attempts
+   * 
+   * Why polling as fallback?
+   * - Socket.io might fail due to network issues, firewall, proxy
+   * - Polling ensures user always gets verdict eventually
+   * - Better UX than showing "connection lost" with no fallback
+   */
+  useEffect(() => {
+    // Only poll if:
+    // 1. We have a current submission being judged
+    // 2. Socket.io is NOT connected
+    // 3. We're not already polling
+    if (!currentSubmission || isSocketConnected() || isPolling) {
+      return
+    }
+    
+    // If we have a submission but Socket.io is disconnected, start polling
+    console.log('[useSubmission] Socket.io disconnected, starting polling fallback')
+    
+    setIsPolling(true)
+    setPollingAttempts(0)
+    
+    // Polling configuration
+    const POLL_INTERVAL_MS = 2000 // 2 seconds
+    const MAX_POLL_ATTEMPTS = 30 // 60 seconds total
+    
+    let pollCount = 0
+    
+    // Start polling interval
+    const pollInterval = setInterval(async () => {
+      pollCount++
+      setPollingAttempts(pollCount)
+      
+      console.log(`[useSubmission] Polling attempt ${pollCount}/${MAX_POLL_ATTEMPTS}`)
+      
+      try {
+        // Fetch submission status from API
+        const response = await api.get<{ submission: Submission }>(`/submissions/${currentSubmission._id}`)
+        const submission = response.data.submission
+        
+        console.log('[useSubmission] Polling received verdict:', submission.verdict)
+        
+        // Check if verdict is no longer PENDING
+        if (submission.verdict !== 'PENDING') {
+          // Verdict received! Update state
+          setVerdict(submission.verdict)
+          setExecutionTime(submission.executionTime)
+          setMemoryUsed(submission.memoryUsed)
+          setCompilerError(submission.compilerError)
+          setIsJudging(false)
+          setError(null)
+          
+          // Stop polling
+          clearInterval(pollInterval)
+          setIsPolling(false)
+          
+          console.log('[useSubmission] Verdict received via polling, stopping')
+        }
+      } catch (err: any) {
+        console.error('[useSubmission] Polling error:', err)
+        // Continue polling despite errors (might be transient)
+      }
+      
+      // Check if we've exceeded max attempts
+      if (pollCount >= MAX_POLL_ATTEMPTS) {
+        console.error('[useSubmission] Polling timeout after', MAX_POLL_ATTEMPTS, 'attempts')
+        
+        // Stop polling
+        clearInterval(pollInterval)
+        setIsPolling(false)
+        setIsJudging(false)
+        
+        // Display timeout error
+        setError('Verdict not received. Please check status or refresh the page.')
+        
+        // Note: We don't clear currentSubmission here so the "Check Status" button can retry
+      }
+    }, POLL_INTERVAL_MS)
+    
+    // Cleanup function
+    return () => {
+      console.log('[useSubmission] Cleaning up polling interval')
+      clearInterval(pollInterval)
+      setIsPolling(false)
+    }
+  }, [currentSubmission, isPolling])
+  
+  /**
+   * Effect: Switch back to Socket.io when connection is restored
+   * 
+   * This effect monitors Socket.io connection state and stops polling
+   * when the connection is restored.
+   */
+  useEffect(() => {
+    // If Socket.io reconnects while we're polling, stop polling
+    if (isPolling && isSocketConnected()) {
+      console.log('[useSubmission] Socket.io reconnected, stopping polling')
+      setIsPolling(false)
+      setPollingAttempts(0)
+      
+      // Socket.io will now handle verdict updates
+      // The verdict event listener is still active from the first useEffect
+    }
+  }, [isPolling])
   
   // ==========================================================================
   // SUBMIT FUNCTION
@@ -305,14 +509,28 @@ export function useSubmission(): UseSubmissionReturn {
           codeLength: code.length,
         })
         
-        const response = await api.post<Submission>('/submissions', {
+        const response = await api.post<SubmitResponse>('/submissions', {
           code,
           language,
           problemId,
           contestId,
         })
         
-        const submission = response.data
+        const userId = 'id' in user ? user.id : (user as any)._id
+        const submission: Submission = {
+          _id: response.data.submissionId,
+          userId,
+          problemId,
+          contestId: contestId ?? null,
+          language,
+          code,
+          verdict: 'PENDING',
+          executionTime: null,
+          memoryUsed: null,
+          compilerError: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
         
         console.log('[useSubmission] Submission created:', submission._id)
         
@@ -321,6 +539,9 @@ export function useSubmission(): UseSubmissionReturn {
         // ====================================================================
         
         setCurrentSubmission(submission)
+        
+        // CRITICAL FIX: Update ref to track submission ID
+        currentSubmissionIdRef.current = submission._id
         
         // ====================================================================
         // STEP 5: Wait for verdict via Socket.io
@@ -371,7 +592,53 @@ export function useSubmission(): UseSubmissionReturn {
     setCompilerError(null)
     setIsJudging(false)
     setError(null)
+    setIsPolling(false)
+    setPollingAttempts(0)
+    currentSubmissionIdRef.current = null
   }, [])
+  
+  // ==========================================================================
+  // CHECK STATUS FUNCTION
+  // ==========================================================================
+  
+  /**
+   * Check Status function - manually fetch verdict
+   * 
+   * This function allows users to manually check submission status
+   * when polling times out or they want to refresh the verdict.
+   * 
+   * Use case: Display a "Check Status" button when polling times out
+   */
+  const checkStatus = useCallback(async () => {
+    if (!currentSubmission) {
+      console.warn('[useSubmission] No current submission to check')
+      return
+    }
+    
+    try {
+      console.log('[useSubmission] Manually checking submission status')
+      
+      const response = await api.get<{ submission: Submission }>(`/submissions/${currentSubmission._id}`)
+      const submission = response.data.submission
+      
+      console.log('[useSubmission] Manual check received verdict:', submission.verdict)
+      
+      // Update state with fetched verdict
+      setVerdict(submission.verdict)
+      setExecutionTime(submission.executionTime)
+      setMemoryUsed(submission.memoryUsed)
+      setCompilerError(submission.compilerError)
+      
+      // If verdict is no longer PENDING, stop judging state
+      if (submission.verdict !== 'PENDING') {
+        setIsJudging(false)
+        setError(null)
+      }
+    } catch (err: any) {
+      console.error('[useSubmission] Failed to check status:', err)
+      setError(err.response?.data?.message || 'Failed to check submission status')
+    }
+  }, [currentSubmission])
   
   // ==========================================================================
   // RETURN HOOK API
@@ -387,6 +654,9 @@ export function useSubmission(): UseSubmissionReturn {
     isJudging,
     error,
     reset,
+    checkStatus,
+    isPolling,
+    pollingAttempts,
   }
 }
 

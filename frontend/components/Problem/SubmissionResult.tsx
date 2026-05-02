@@ -83,6 +83,7 @@
 
 import { clsx } from 'clsx'
 import type { SubmissionVerdict } from '@/types'
+import { VerdictBadge } from '@/components/Submission/VerdictBadge'
 
 /**
  * Test Case Result Interface
@@ -139,55 +140,46 @@ interface SubmissionResultProps {
 }
 
 /**
- * Get verdict display text
+ * Clock Icon (for execution time)
  */
-function getVerdictText(verdict: SubmissionVerdict): string {
-  const verdictMap: Record<SubmissionVerdict, string> = {
-    AC: 'Accepted',
-    WA: 'Wrong Answer',
-    TLE: 'Time Limit Exceeded',
-    MLE: 'Memory Limit Exceeded',
-    RE: 'Runtime Error',
-    CE: 'Compilation Error',
-    PENDING: 'Judging...',
-  }
-  return verdictMap[verdict]
-}
-
-/**
- * Get verdict color classes
- * Returns Tailwind classes for text and background colors
- */
-function getVerdictColorClasses(verdict: SubmissionVerdict): string {
-  // Use clsx for clean conditional class logic
-  return clsx(
-    // Base classes (always applied)
-    'font-semibold text-lg',
-    
-    // Conditional classes based on verdict
-    verdict === 'AC' && 'text-green-600',
-    verdict === 'WA' && 'text-red-600',
-    verdict === 'TLE' && 'text-yellow-600',
-    verdict === 'MLE' && 'text-orange-600',
-    verdict === 'RE' && 'text-purple-600',
-    verdict === 'CE' && 'text-red-700',
-    verdict === 'PENDING' && 'text-blue-600'
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
   )
 }
 
 /**
- * Get verdict background color classes
+ * Memory Icon (for memory usage)
  */
-function getVerdictBgClasses(verdict: SubmissionVerdict): string {
-  return clsx(
-    'px-4 py-3 rounded-lg border',
-    verdict === 'AC' && 'bg-green-50 border-green-200',
-    verdict === 'WA' && 'bg-red-50 border-red-200',
-    verdict === 'TLE' && 'bg-yellow-50 border-yellow-200',
-    verdict === 'MLE' && 'bg-orange-50 border-orange-200',
-    verdict === 'RE' && 'bg-purple-50 border-purple-200',
-    verdict === 'CE' && 'bg-red-50 border-red-200',
-    verdict === 'PENDING' && 'bg-blue-50 border-blue-200'
+function MemoryIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+      />
+    </svg>
   )
 }
 
@@ -209,46 +201,53 @@ export function SubmissionResult({
     <div className="space-y-4">
       {/* ====================================================================
           VERDICT HEADER
-          Shows overall verdict with color-coded styling
+          Shows overall verdict with VerdictBadge component and metrics
           ==================================================================== */}
-      <div className={getVerdictBgClasses(verdict)}>
+      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        {/* Verdict Badge */}
         <div className="flex items-center justify-between">
-          <div>
-            <div className={getVerdictColorClasses(verdict)}>
-              {getVerdictText(verdict)}
-            </div>
-            
-            {/* Show test case summary if available */}
-            {totalCount > 0 && (
-              <div className="text-sm text-gray-600 mt-1">
-                Passed {passedCount} of {totalCount} test cases
-              </div>
-            )}
-          </div>
+          <VerdictBadge verdict={verdict} size="large" />
           
-          {/* Execution metrics (time and memory) */}
-          {(executionTime !== null || memoryUsed !== null) && (
-            <div className="text-sm text-gray-600 space-y-1">
-              {executionTime !== null && (
-                <div>Time: {executionTime}ms</div>
-              )}
-              {memoryUsed !== null && (
-                <div>Memory: {memoryUsed.toFixed(2)}MB</div>
-              )}
+          {/* Test case summary if available */}
+          {totalCount > 0 && (
+            <div className="text-sm text-gray-600">
+              {passedCount} / {totalCount} tests passed
             </div>
           )}
         </div>
+        
+        {/* Execution metrics (time and memory) */}
+        {(executionTime !== null && executionTime !== undefined) || 
+         (memoryUsed !== null && memoryUsed !== undefined) ? (
+          <div className="flex items-center gap-6 text-sm text-gray-700 pt-2 border-t border-gray-100">
+            {executionTime !== null && executionTime !== undefined && (
+              <div className="flex items-center gap-2">
+                <ClockIcon className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">Execution Time:</span>
+                <span>{executionTime}ms</span>
+              </div>
+            )}
+            {memoryUsed !== null && memoryUsed !== undefined && (
+              <div className="flex items-center gap-2">
+                <MemoryIcon className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">Memory Used:</span>
+                <span>{memoryUsed.toFixed(2)}MB</span>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
       
       {/* ====================================================================
           COMPILER ERROR (only shown for CE verdict)
+          Displayed in monospace font for readability
           ==================================================================== */}
       {compilerError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="text-red-700 font-semibold mb-2">
             Compilation Error:
           </div>
-          <pre className="text-sm text-red-600 whitespace-pre-wrap font-mono overflow-x-auto">
+          <pre className="text-sm text-red-600 whitespace-pre-wrap font-mono overflow-x-auto bg-white p-3 rounded border border-red-100">
             {compilerError}
           </pre>
         </div>

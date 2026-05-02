@@ -135,7 +135,8 @@ const worker = new Worker('submissions', async (job) => {
           submissionId,
           verdict: verdict.verdict,
           executionTime: verdict.executionTime,
-          memoryUsed: verdict.memoryUsed
+          memoryUsed: verdict.memoryUsed,
+          compilerError: verdict.compilerError
         }
       }));
     } catch (error) {
