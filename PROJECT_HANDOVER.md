@@ -122,7 +122,7 @@ codecourt/
 #### Phase 2: Core Backend (Mostly Complete)
 - ✅ Auth module (register, login, JWT, refresh tokens)
 - ✅ Problem CRUD (create, list, get, update, delete)
-- ✅ Submission system (create, judge, get results)
+- ⚠️ **Partial**: Submission system (create, queue works; judge needs image build)
 - ✅ Contest system (create, register, leaderboard)
 - ✅ Socket.io real-time updates
 - ⚠️ **Partial**: S3 test case uploads (can use local storage workaround)
@@ -575,10 +575,19 @@ docker compose restart ai-service
 - Or use local storage: `USE_LOCAL_STORAGE=true`
 
 ### Judge Not Working
+- **CRITICAL**: Build judge images first!
+  ```bash
+  # Windows PowerShell
+  .\backend\docker\judges\build-judges.ps1
+  
+  # Mac/Linux
+  bash backend/docker/judges/build-judges.sh
+  ```
 - Check Docker is running
-- Verify judge images are built
+- Verify judge images exist: `docker images | grep codecourt-judge`
 - Check BullMQ queue is processing
 - View worker logs: `docker compose logs -f api`
+- **See FIX_JUDGE_SYSTEM.md for complete troubleshooting**
 
 ---
 

@@ -361,10 +361,10 @@ async function runJudge(code, language, problem, testCases) {
 }
 
 /**
- * Compile C++ code in Docker container
+ * Compile C++ code in Docker container using custom judge image
  * 
- * Compiles C++ source code using g++ in a Docker container. Uses modern C++17
- * standard with O2 optimization (standard for competitive programming).
+ * Compiles C++ source code using the custom codecourt-judge-cpp image.
+ * The image contains g++ compiler and judge.sh script for execution.
  * 
  * @param {string} tmpDir - Temporary directory containing solution.cpp
  * @returns {Promise<Object>} Compilation result: { success: boolean, error?: string }
@@ -374,10 +374,10 @@ async function runJudge(code, language, problem, testCases) {
  * - -v: Mount tmpdir as /sandbox volume
  * - -w: Set working directory to /sandbox
  * 
- * g++ flags:
- * - -O2: Optimization level 2 (standard for CP)
- * - -std=c++17: Use C++17 standard
- * - -o solution: Output executable named 'solution'
+ * Uses codecourt-judge-cpp image which includes:
+ * - g++ compiler with C++17 support
+ * - Alpine Linux base (lightweight)
+ * - Non-root user for security
  */
 async function compileCode(tmpDir) {
   return new Promise((resolve) => {
@@ -386,7 +386,7 @@ async function compileCode(tmpDir) {
       '--rm',
       '-v', `${tmpDir}:/sandbox`,
       '-w', '/sandbox',
-      'gcc:13',
+      'codecourt-judge-cpp',
       'g++',
       '-O2',
       '-std=c++17',
@@ -410,7 +410,7 @@ async function compileCode(tmpDir) {
     });
     
     compile.on('error', (error) => {
-      // Docker spawn error (e.g., Docker not running)
+      // Docker spawn error (e.g., Docker not running or image not built)
       resolve({ success: false, error: error.message });
     });
   });
@@ -451,7 +451,7 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
   
   let dockerCmd;
   if (language === 'cpp') {
-    // Run compiled C++ executable
+    // Run compiled C++ executable using custom judge image
     dockerCmd = [
       'run',
       '--rm',
@@ -460,13 +460,14 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
       '--cpus', '1', // CPU limit
       '-v', `${tmpDir}:/sandbox`,
       '-w', '/sandbox',
-      'gcc:13',
+      '-e', `TIME_LIMIT=${timeLimitSeconds}`, // Pass time limit to judge script
+      'codecourt-judge-cpp',
       'timeout', // Use Alpine's timeout command
       `${timeLimitSeconds}s`,
       './solution'
     ];
   } else {
-    // Run Python script
+    // Run Python script using custom judge image
     dockerCmd = [
       'run',
       '--rm',
@@ -475,10 +476,11 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
       '--cpus', '1', // CPU limit
       '-v', `${tmpDir}:/sandbox`,
       '-w', '/sandbox',
-      'python:3.11-alpine',
+      '-e', `TIME_LIMIT=${timeLimitSeconds}`, // Pass time limit to judge script
+      'codecourt-judge-python',
       'timeout', // Use Alpine's timeout command
       `${timeLimitSeconds}s`,
-      'python',
+      'python3',
       'solution.py'
     ];
   }
