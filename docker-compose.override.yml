@@ -1,0 +1,17 @@
+services:
+  api:
+    environment:
+      - NODE_ENV=development
+      - JUDGE_VOLUME_NAME=judge-tmp
+      - JUDGE_VOLUME_PATH=/judge-tmp
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./backend:/app
+      - api-node-modules:/app/node_modules
+      - judge-tmp:/judge-tmp
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  api-node-modules:
+  judge-tmp:
+    name: judge-tmp
