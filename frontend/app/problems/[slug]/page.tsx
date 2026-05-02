@@ -20,6 +20,8 @@ import { Problem } from '@/types'
 import ProblemStatement from '@/components/Problem/ProblemStatement'
 import MonacoEditor from '@/components/Editor/MonacoEditor'
 import SubmitButton from '@/components/Editor/SubmitButton'
+import { SubmissionResult } from '@/components/Problem/SubmissionResult'
+import { useSubmission } from '@/hooks/useSubmission'
 
 export default function ProblemPage() {
   // ============================================================================
@@ -52,8 +54,17 @@ export default function ProblemPage() {
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState<'cpp' | 'python'>('cpp')
   
-  // Submission state
-  const [isJudging, setIsJudging] = useState(false)
+  // Submission state (real-time via Socket.io)
+  const {
+    submit,
+    verdict,
+    executionTime,
+    memoryUsed,
+    compilerError,
+    isJudging,
+    error: submissionError,
+    reset: resetSubmission,
+  } = useSubmission()
   
   // AI Hint state
   const [hintText, setHintText] = useState<string | null>(null)
@@ -117,10 +128,7 @@ export default function ProblemPage() {
   /**
    * For now, just console.log the code and language
    * 
-   * In the future (Task 4.3.7), this will:
-   * 1. Call POST /api/submissions with { code, language, problemId }
-   * 2. Listen for verdict via Socket.io
-   * 3. Display the verdict in the UI
+   * Submits code to POST /api/submissions and listens for verdict via Socket.io.
    */
   /**
    * Handle code submission to the judge system
@@ -135,28 +143,10 @@ export default function ProblemPage() {
     }
     
     try {
-      setIsJudging(true)
-      
-      // Submit code to backend
-      const response = await api.post('/submissions', {
-        problemId: problem._id,
-        code: code,
-        language: language,
-        // contestId: contestId // Optional: add if in contest mode
-      })
-      
-      console.log('Submission queued:', response.data)
-      
-      // TODO: Listen for verdict via Socket.io
-      // For now, simulate judging and show message
-      setTimeout(() => {
-        setIsJudging(false)
-        alert(`Submission queued! Submission ID: ${response.data.submissionId}\n\nNote: Real-time verdict updates via Socket.io are not yet implemented. Check the Submissions page to see your result.`)
-      }, 2000)
-      
+      resetSubmission()
+      await submit(code, language, problem._id)
     } catch (err: any) {
       console.error('Submission failed:', err)
-      setIsJudging(false)
       
       if (err.response?.status === 401) {
         alert('Please log in to submit code')
@@ -439,6 +429,23 @@ export default function ProblemPage() {
               : 'Click submit to test your solution'
             }
           </p>
+
+          {/* Real-time verdict result */}
+          {verdict && (
+            <SubmissionResult
+              verdict={verdict}
+              testCases={[]}
+              executionTime={executionTime}
+              memoryUsed={memoryUsed}
+              compilerError={compilerError}
+            />
+          )}
+
+          {submissionError && !verdict && (
+            <p className="text-xs text-red-600 text-center">
+              {submissionError}
+            </p>
+          )}
           
           {/* Divider */}
           <div className="border-t border-gray-200 pt-3">

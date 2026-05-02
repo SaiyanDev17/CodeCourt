@@ -88,7 +88,7 @@ let socket: Socket | null = null
 export function getSocket(): Socket {
   if (!socket) {
     // Create the socket instance with configuration
-    socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+    socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000', {
       // ======================================================================
       // autoConnect: false is CRITICAL
       // ======================================================================
