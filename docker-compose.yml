@@ -4,6 +4,7 @@ services:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile
+    user: "0:0"
     ports:
       - "5001:5000"  # External port 5001 maps to internal port 5000
     environment:
