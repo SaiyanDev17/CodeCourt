@@ -412,6 +412,89 @@ class SubmissionsController {
       next(error);
     }
   }
+
+  /**
+   * Get all submissions by the authenticated user across all problems
+   * 
+   * Retrieves a complete submission history for the authenticated user, including
+   * problem details (title, slug) for each submission. This is used for the
+   * "All Submissions" page where users can view their entire submission history
+   * across all problems.
+   * 
+   * Key Features:
+   * - Returns submissions with problem details (title, slug) via MongoDB aggregation
+   * - Excludes code field for security and performance (code only in detail view)
+   * - Sorted by creation date descending (newest first)
+   * - Filtered by authenticated user (users see only their own submissions)
+   * 
+   * Use Cases:
+   * - All Submissions page at /submissions route
+   * - User's complete submission history dashboard
+   * - Filtering by verdict (frontend can filter the results)
+   * - Tracking overall progress across all problems
+   * 
+   * Response Format:
+   * Each submission includes:
+   * - Submission fields: _id, verdict, executionTime, memoryUsed, language, createdAt
+   * - Problem fields: problemId, problemTitle, problemSlug
+   * - Code field is EXCLUDED (security - only show code in detail view)
+   * 
+   * HTTP Status Codes:
+   * - 200 OK: Submissions found (may be empty array if no submissions)
+   * - 401 Unauthorized: Missing or invalid JWT token
+   * - 500 Internal Server Error: Database error
+   * 
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.user - Authenticated user (attached by authGuard middleware)
+   * @param {string} req.user.id - User's MongoDB ObjectId
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Responds with 200 and array of submissions with problem details
+   * 
+   * @example
+   * // Request: GET /api/submissions
+   * 
+   * // Response (200 OK)
+   * {
+   *   "count": 5,
+   *   "submissions": [
+   *     {
+   *       "_id": "507f1f77bcf86cd799439015",
+   *       "verdict": "AC",
+   *       "executionTime": 45,
+   *       "memoryUsed": 2048,
+   *       "language": "python",
+   *       "createdAt": "2024-01-15T10:35:00.000Z",
+   *       "problemId": "507f1f77bcf86cd799439011",
+   *       "problemTitle": "Two Sum",
+   *       "problemSlug": "two-sum"
+   *     },
+   *     {
+   *       "_id": "507f1f77bcf86cd799439014",
+   *       "verdict": "WA",
+   *       "executionTime": 50,
+   *       "memoryUsed": 1800,
+   *       "language": "cpp",
+   *       "createdAt": "2024-01-15T10:30:00.000Z",
+   *       "problemId": "507f1f77bcf86cd799439012",
+   *       "problemTitle": "Binary Search",
+   *       "problemSlug": "binary-search"
+   *     }
+   *   ]
+   * }
+   */
+  async getAllSubmissions(req, res, next) {
+    try {
+      const userId = req.user.id;
+      
+      const result = await submissionsService.getAllSubmissionsWithProblemDetails(userId);
+      
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new SubmissionsController();

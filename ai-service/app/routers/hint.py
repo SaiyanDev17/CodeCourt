@@ -69,10 +69,12 @@
 # HintResponse: Pydantic model that validates the outgoing JSON response
 # create_agent_executor: Factory function that creates our LangChain agent
 # ============================================================================
-from functools import lru_cache
+import json
+
+import httpx
 from fastapi import APIRouter, HTTPException
 from app.models.schemas import HintRequest, HintResponse
-from app.agent.executor import create_agent_executor
+from app.config import settings
 
 
 # ============================================================================
@@ -110,46 +112,166 @@ router = APIRouter(
 )
 
 
-# ============================================================================
-# CREATE THE AGENT EXECUTOR (SINGLETON)
-# ============================================================================
-# We create the agent executor ONCE when this module is imported.
-# This is more efficient than creating it on every request.
-#
-# EXPRESS.JS EQUIVALENT:
-# ----------------------
-# In Express, you might do something similar:
-#   const agentExecutor = createAgentExecutor();  // Created once at startup
-#   
-#   router.post('/hint', async (req, res) => {
-#     const result = await agentExecutor.invoke(...);  // Reuse the same instance
-#   });
-#
-# PYTHON PATTERN:
-# ---------------
-# We create the agent executor at module load time:
-#   agent_executor = create_agent_executor()  # Created once when module loads
-#   
-#   @router.post("/")
-#   async def generate_hint(request: HintRequest):
-#     result = await agent_executor.ainvoke(...)  # Reuse the same instance
-#
-# WHY CREATE IT ONCE?
-# -------------------
-# 1. Performance: Creating an agent executor is expensive (loads LLM, tools, etc.)
-# 2. Memory: Reusing the same instance saves memory
-# 3. Connection pooling: The LLM client can maintain persistent connections
-# 4. Startup validation: If there's a config error, we catch it at startup
-#
-# WHEN IS THIS EXECUTED?
-# ----------------------
-# This line runs when the module is first imported (e.g., in main.py).
-# It's similar to initializing a database connection pool at startup.
-# ============================================================================
-@lru_cache(maxsize=1)
-def get_agent_executor():
-    """Create and cache the agent executor (singleton pattern)."""
-    return create_agent_executor()
+def _format_json_block(value: dict) -> str:
+    return json.dumps(value, indent=2, ensure_ascii=False, default=str)
+
+
+def _build_hint_prompt(
+    *,
+    hint_index: int,
+    problem: dict,
+    submission_history: dict,
+    previous_hints: list[dict],
+) -> str:
+    elaboration_rules = {
+        1: (
+            "This is Hint 1. Be high-level and conceptual: 1-2 short paragraphs. "
+            "Use guiding questions and point toward the key observation without naming the final algorithm directly."
+        ),
+        2: (
+            "This is Hint 2. Be more elaborate than Hint 1: 2-4 short paragraphs. "
+            "Narrow the approach, discuss useful state/invariants or edge cases, and mention complexity pressure."
+        ),
+        3: (
+            "This is Hint 3. Be the most elaborate hint: give a concrete strategy and, if helpful, "
+            "at most 3 lines of pseudocode. Still do not provide a complete solution or copy-pasteable code."
+        ),
+    }
+
+    return f"""You are CodeCourt's competitive-programming mentor. Generate exactly one hint for the current request.
+
+The hint must be specific to the MongoDB problem details below and must not repeat previous hints.
+
+Question details from MongoDB:
+- Title: {problem.get("title")}
+- Slug: {problem.get("slug")}
+- Difficulty: {problem.get("difficulty")}
+- Time limit: {problem.get("timeLimit")} ms
+- Memory limit: {problem.get("memoryLimit")} MB
+- Description:
+{problem.get("description")}
+- Constraints:
+{problem.get("constraints")}
+- Sample test cases:
+{_format_json_block({"sampleTestCases": problem.get("sampleTestCases", [])})}
+- Other available problem metadata:
+{_format_json_block({key: value for key, value in problem.items() if key not in {"title", "slug", "difficulty", "timeLimit", "memoryLimit", "description", "constraints", "sampleTestCases", "hiddenTestCasesS3Key", "authorId"}})}
+
+User context:
+- This request is for Hint {hint_index} of 3.
+- Previous hints already shown:
+{_format_json_block({"previousHints": previous_hints})}
+- Submission history:
+{_format_json_block(submission_history)}
+
+Progression rule:
+{elaboration_rules[hint_index]}
+
+Quality rules:
+- All three hints for a problem must be different and increasingly elaborate.
+- Use the title, description, constraints, sample cases, time/memory limits, and submission history when relevant.
+- If submissions show WA, focus on edge cases or logic gaps. If TLE, focus on efficiency. If RE/CE, focus on boundaries or language/runtime issues.
+- Do not reveal the full solution, full algorithm implementation, or complete code.
+- Do not include "Hint {hint_index}" in the answer; the UI displays the number.
+- Return only the hint text."""
+
+
+async def _backend_get(client: httpx.AsyncClient, path: str, params: dict | None = None) -> dict:
+    response = await client.get(f"{settings.EXPRESS_API_URL}{path}", params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+async def _backend_post(client: httpx.AsyncClient, path: str, payload: dict) -> dict:
+    response = await client.post(f"{settings.EXPRESS_API_URL}{path}", json=payload)
+    response.raise_for_status()
+    return response.json()
+
+
+async def _generate_hint_with_llm(prompt: str) -> str:
+    from langchain_groq import ChatGroq
+
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=settings.GROQ_API_KEY,
+        temperature=0.65,
+    )
+    result = await llm.ainvoke(prompt)
+    return result.content.strip()
+
+
+def _latest_submission_focus(submission_history: dict) -> str:
+    submissions = submission_history.get("submissions", [])
+    if not submissions:
+        return "No previous submissions were found, so start by matching the sample cases carefully."
+
+    latest = submissions[0]
+    verdict = latest.get("verdict")
+    if verdict == "WA":
+        return "Your latest submission was Wrong Answer, so pay close attention to edge cases and whether your logic handles every valid input shape."
+    if verdict == "TLE":
+        return "Your latest submission timed out, so the main issue is likely the growth rate of your approach under the stated constraints."
+    if verdict == "MLE":
+        return "Your latest submission used too much memory, so look for a way to keep only the information needed for the next decision."
+    if verdict == "RE":
+        return "Your latest submission had a runtime error, so check boundary conditions, empty/short inputs, indexing, and assumptions about parsed input."
+    if verdict == "CE":
+        return "Your latest submission had a compilation error, so first make sure the function signature, includes/imports, and returned type match the judge template."
+    if verdict == "AC":
+        return "You already have an accepted submission recorded; use this hint to understand the reasoning, not just the code."
+    return "Use your latest submission result to decide whether the next improvement should target correctness, performance, or implementation details."
+
+
+def _generate_fallback_hint(
+    *,
+    hint_index: int,
+    problem: dict,
+    submission_history: dict,
+    previous_hints: list[dict],
+) -> str:
+    title = problem.get("title") or "this problem"
+    constraints = (problem.get("constraints") or "").strip()
+    samples = problem.get("sampleTestCases") or []
+    first_sample = samples[0] if samples else {}
+    focus = _latest_submission_focus(submission_history)
+
+    if hint_index == 1:
+        sample_note = ""
+        if first_sample:
+            sample_note = (
+                f" In the first sample, compare the input and output and ask what relationship the output is proving, "
+                f"not just what values appear there."
+            )
+        return (
+            f"Think about the core observation in {title}: what information do you need to remember while scanning or "
+            f"processing the input, and what can be safely ignored? {focus}{sample_note}"
+        )
+
+    if hint_index == 2:
+        constraint_note = (
+            f" The constraints are important here: {constraints} "
+            if constraints
+            else " The constraints are important here: estimate whether a nested or repeated scan would still fit. "
+        )
+        return (
+            f"Narrow the problem down to the decision you make for each element or state. Before doing expensive work, "
+            f"ask whether an earlier value/state can answer the current question faster if you store a compact summary of it."
+            f"{constraint_note}{focus} Make sure duplicate values, smallest valid input sizes, and negative/large values "
+            f"are handled according to the statement."
+        )
+
+    previous_summary = ""
+    if previous_hints:
+        previous_summary = " Build on the earlier hints by turning the remembered information into a direct lookup/check."
+    return (
+        f"Concrete strategy for {title}: process the input in one clear direction, keep a small structure containing only "
+        f"the useful facts from positions/states you have already passed, and before adding the current item, check whether "
+        f"that stored information completes the required condition.{previous_summary}\n"
+        f"Pseudocode sketch:\n"
+        f"for each item/state: check whether its needed partner/info was seen\n"
+        f"if found, form the required answer\n"
+        f"otherwise record the current item/state for later"
+    )
 
 
 # ============================================================================
@@ -328,139 +450,88 @@ async def generate_hint(request: HintRequest) -> HintResponse:
     #
     # The agent will extract these from the input and pass them to the tools.
     # ========================================================================
-    user_input = (
-        f"User {request.user_id} is requesting a hint for problem "
-        f"{request.problem_slug} (problem ID: {request.problem_id}). "
-        f"Generate a helpful hint without revealing the full solution."
-    )
-    
-    # ========================================================================
-    # STEP 2: Invoke the agent
-    # ========================================================================
-    # The new create_agent returns a CompiledStateGraph that expects input
-    # in the format: {"messages": [{"role": "user", "content": "..."}]}
-    #
-    # The agent will:
-    # 1. Parse the user message
-    # 2. Decide which tools to call
-    # 3. Call the tools in sequence
-    # 4. Generate a hint based on the tool results
-    # 5. Return the final response
-    # ========================================================================
     try:
-        # Get the lazily-initialized agent executor
-        agent_executor = get_agent_executor()
-        
-        # Invoke the agent with the user input in message format
-        result = await agent_executor.ainvoke({
-            "messages": [{"role": "user", "content": user_input}]
-        })
-        
-        # Extract the hint text from the agent's output
-        # The result contains a "messages" list, and the last message is the agent's response
-        hint_text = result["messages"][-1].content
-        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            count_data = await _backend_get(
+                client,
+                "/api/agent/hint-count",
+                {"user_id": request.user_id, "problem_id": request.problem_id},
+            )
+            existing_count = count_data["hint_count"]
+
+            if existing_count >= 3:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You have already used all 3 hints for this problem",
+                )
+
+            hint_index = existing_count + 1
+
+            problem_data = await _backend_get(
+                client,
+                f"/api/problems/{request.problem_slug}",
+            )
+            problem = problem_data.get("problem", problem_data)
+
+            submission_history = await _backend_get(
+                client,
+                "/api/agent/submissions",
+                {"user_id": request.user_id, "problem_id": request.problem_id},
+            )
+            previous_hints_data = await _backend_get(
+                client,
+                "/api/agent/hints",
+                {"user_id": request.user_id, "problem_id": request.problem_id},
+            )
+            previous_hints = previous_hints_data.get("hints", [])
+
+            prompt = _build_hint_prompt(
+                hint_index=hint_index,
+                problem=problem,
+                submission_history=submission_history,
+                previous_hints=previous_hints,
+            )
+            try:
+                hint_text = await _generate_hint_with_llm(prompt)
+            except Exception as llm_error:
+                print(f"Warning: LLM hint generation failed, using fallback: {str(llm_error)}")
+                hint_text = _generate_fallback_hint(
+                    hint_index=hint_index,
+                    problem=problem,
+                    submission_history=submission_history,
+                    previous_hints=previous_hints,
+                )
+
+            save_data = await _backend_post(
+                client,
+                "/api/agent/save-hint",
+                {
+                    "user_id": request.user_id,
+                    "problem_id": request.problem_id,
+                    "hint_text": hint_text,
+                },
+            )
+
+            hints_used = save_data.get("hints_used", hint_index)
+            hint_index = save_data.get("hint_index", hint_index)
+
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        status_code = e.response.status_code
+        detail = "Failed to generate hint. Please try again later."
+        try:
+            body = e.response.json()
+            detail = body.get("message") or body.get("error") or body.get("detail") or detail
+        except ValueError:
+            pass
+        raise HTTPException(status_code=status_code, detail=detail)
     except Exception as e:
-        # ====================================================================
-        # ERROR HANDLING
-        # ====================================================================
-        # If the agent execution fails, we catch the exception and return
-        # a 500 error to the frontend.
-        #
-        # EXPRESS.JS EQUIVALENT:
-        # ----------------------
-        # catch (error) {
-        #   console.error('Agent execution failed:', error);
-        #   return res.status(500).json({
-        #     error: 'Failed to generate hint',
-        #     detail: error.message
-        #   });
-        # }
-        #
-        # FASTAPI PATTERN:
-        # ----------------
-        # We raise an HTTPException with status_code=500:
-        #   raise HTTPException(status_code=500, detail="Error message")
-        #
-        # FastAPI will automatically:
-        # - Return HTTP 500 status code
-        # - Return JSON: {"detail": "Error message"}
-        # - Log the error
-        #
-        # COMMON ERRORS:
-        # --------------
-        # - Groq API error: LLM service is down or rate limited
-        # - Express API error: Backend service is unreachable
-        # - Tool execution error: A tool call failed (e.g., database error)
-        # - Parsing error: Agent couldn't parse the LLM's response
-        #
-        # WHY WE CATCH ALL EXCEPTIONS:
-        # ----------------------------
-        # We want to return a user-friendly error message instead of crashing.
-        # The frontend will display: "Failed to generate hint. Please try again."
-        # ====================================================================
-        
-        # Log the error for debugging (will appear in the console)
         print(f"Error generating hint: {str(e)}")
-        
-        # Raise an HTTP 500 error with a user-friendly message
-        # FastAPI will automatically convert this to a JSON response:
-        # {"detail": "Failed to generate hint. Please try again later."}
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate hint. Please try again later. Error: {str(e)}"
+            detail=f"Failed to generate hint. Please try again later. Error: {str(e)}",
         )
-    
-    # ========================================================================
-    # STEP 3: Get the hint count
-    # ========================================================================
-    # After the agent generates the hint, we need to return the total number
-    # of hints used for this (user, problem) pair.
-    #
-    # The agent already called save_hint, which incremented the count.
-    # Now we need to fetch the updated count from the database.
-    #
-    # EXPRESS.JS EQUIVALENT:
-    # ----------------------
-    # const hintsUsed = await hintService.getCount(req.body.user_id, req.body.problem_id);
-    #
-    # PYTHON PATTERN:
-    # ---------------
-    # We call the get_hint_count tool directly (not through the agent):
-    #   from app.agent.tools import get_hint_count
-    #   hints_used = await get_hint_count(request.user_id, request.problem_id)
-    #
-    # WHY NOT LET THE AGENT DO THIS?
-    # -------------------------------
-    # The agent already called save_hint, which returns the updated count.
-    # But we don't have access to that return value here (it's in the agent's
-    # internal state). So we need to fetch it again.
-    #
-    # OPTIMIZATION OPPORTUNITY:
-    # -------------------------
-    # In a production system, you might:
-    # 1. Parse the agent's intermediate steps to extract the save_hint result
-    # 2. Or modify the agent to return both the hint and the count
-    # 3. Or cache the count in Redis to avoid an extra database call
-    #
-    # For now, we keep it simple and just fetch the count again.
-    # ========================================================================
-    try:
-        # Import the get_hint_count tool
-        from app.agent.tools import get_hint_count
-        
-        # Fetch the updated hint count from the database
-        # This calls the Express API: GET /api/agent/hint-count?user_id=...&problem_id=...
-        hints_used = await get_hint_count(
-            user_id=request.user_id,
-            problem_id=request.problem_id
-        )
-        
-    except Exception as e:
-        # If fetching the hint count fails, we still want to return the hint
-        # We'll just set hints_used to 1 as a fallback
-        print(f"Warning: Failed to fetch hint count: {str(e)}")
-        hints_used = 1  # Fallback value
     
     # ========================================================================
     # STEP 4: Return the response
@@ -504,7 +575,8 @@ async def generate_hint(request: HintRequest) -> HintResponse:
     # ========================================================================
     return HintResponse(
         hint=hint_text,
-        hints_used=hints_used
+        hints_used=hints_used,
+        hint_index=hint_index
     )
 
 

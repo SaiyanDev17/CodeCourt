@@ -42,6 +42,7 @@
  *    - verdict: AC, WA, TLE, MLE, RE, CE
  *    - executionTime: In milliseconds
  *    - memoryUsed: In MB
+ *    - compilerError: Compiler/runtime stderr when available
  * 
  * USAGE:
  * ```javascript
@@ -90,6 +91,7 @@ const { getIO } = require('./index');
  * @param {string} verdictData.verdict - Verdict code (AC, WA, TLE, MLE, RE, CE)
  * @param {number} verdictData.executionTime - Execution time in milliseconds
  * @param {number} verdictData.memoryUsed - Memory used in MB
+ * @param {string|null} verdictData.compilerError - Compiler/runtime stderr when available
  * 
  * @example
  * emitVerdict('507f1f77bcf86cd799439013', {
@@ -105,12 +107,19 @@ exports.emitVerdict = (userId, verdictData) => {
     
     // Emit to user's personal room (user:{userId})
     // Only the submitter receives this event
-    io.to(`user:${userId}`).emit('verdict', verdictData);
+    const roomName = `user:${userId}`;
+    io.to(roomName).emit('verdict', verdictData);
     
-    console.log(`Verdict emitted to user ${userId}:`, verdictData);
+    console.log(`✓ Verdict emitted to room ${roomName}:`, {
+      submissionId: verdictData.submissionId,
+      verdict: verdictData.verdict,
+      executionTime: verdictData.executionTime,
+      memoryUsed: verdictData.memoryUsed,
+      hasCompilerError: Boolean(verdictData.compilerError)
+    });
   } catch (error) {
     // Socket.io may not be initialized (e.g., in test environment)
     // Log error but don't crash - submission is still updated in MongoDB
-    console.error('Failed to emit verdict:', error);
+    console.error('✗ Failed to emit verdict:', error.message);
   }
 };

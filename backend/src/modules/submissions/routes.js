@@ -345,6 +345,46 @@ router.get(
 );
 
 /**
+ * GET /api/submissions
+ * 
+ * Get all submissions by the authenticated user across all problems.
+ * Returns submissions with problem details (title, slug) for the "All Submissions" page.
+ * 
+ * AUTHENTICATION: Required (authGuard)
+ * AUTHORIZATION: Self only (returns only authenticated user's submissions)
+ * 
+ * RESPONSE FORMAT:
+ * {
+ *   count: number,
+ *   submissions: SubmissionWithProblem[]
+ * }
+ * 
+ * Each submission includes:
+ * - Submission fields: _id, verdict, executionTime, memoryUsed, language, createdAt
+ * - Problem fields: problemId, problemTitle, problemSlug
+ * - Code field is EXCLUDED (security - only show code in detail view)
+ * 
+ * SORTING: Newest first (createdAt descending)
+ * 
+ * USE CASES:
+ * - All Submissions page at /submissions route
+ * - User's complete submission history across all problems
+ * - Filtering by verdict (frontend can filter the results)
+ * 
+ * NOTE: This route is declared BEFORE /:id to prevent Express from matching
+ * the root path as an :id parameter.
+ * 
+ * ERROR RESPONSES:
+ * - 401 Unauthorized: Missing/invalid JWT token
+ * - 500 Internal Server Error: Database failure
+ */
+router.get(
+  '/',
+  authGuard,
+  submissionsController.getAllSubmissions
+);
+
+/**
  * GET /api/submissions/:id
  * 
  * Get a single submission by its MongoDB ObjectId.
@@ -353,7 +393,7 @@ router.get(
  * AUTHENTICATION: Required (authGuard)
  * AUTHORIZATION: Owner only (service layer validates submission.userId === req.user.id)
  * 
- * NOTE: This catch-all parameter route is declared AFTER /problem/:problemId
+ * NOTE: This catch-all parameter route is declared AFTER /problem/:problemId and /
  * to prevent it from intercepting more specific paths.
  * 
  * ERROR RESPONSES:

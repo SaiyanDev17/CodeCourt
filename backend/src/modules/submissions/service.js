@@ -706,6 +706,256 @@ class SubmissionsService {
     return submissions;
   }
 
+  /**
+   * Get all submissions by a user across all problems with problem details
+   * 
+   * This method retrieves a user's complete submission history across all problems,
+   * enriched with problem details (title, slug) for display in the "All Submissions" page.
+   * 
+   * IMPLEMENTATION APPROACH:
+   * Uses MongoDB aggregation pipeline to join submissions with problems collection:
+   * 1. Match submissions by userId (filter to authenticated user only)
+   * 2. Lookup problem details from problems collection (LEFT JOIN)
+   * 3. Unwind problem array (convert array to object)
+   * 4. Project fields to shape response (exclude code, include problem fields)
+   * 5. Sort by createdAt descending (newest first)
+   * 
+   * WHY AGGREGATION INSTEAD OF POPULATE?
+   * 
+   * Option 1: Populate (Mongoose convenience method)
+   * ```javascript
+   * Submission.find({ userId })
+   *   .populate('problemId', 'title slug')
+   *   .select('-code')
+   *   .sort({ createdAt: -1 })
+   * ```
+   * PRO: Simple, readable, Mongoose handles the join
+   * CON: Returns nested structure { problemId: { _id, title, slug } }
+   *      Frontend expects flat structure { problemId, problemTitle, problemSlug }
+   *      Would require post-processing to flatten
+   * 
+   * Option 2: Aggregation (MongoDB native pipeline)
+   * ```javascript
+   * Submission.aggregate([
+   *   { $match: { userId } },
+   *   { $lookup: { from: 'problems', ... } },
+   *   { $project: { problemTitle: '$problem.title', ... } }
+   * ])
+   * ```
+   * PRO: Full control over output shape, can flatten in database
+   * CON: More verbose, requires understanding of aggregation pipeline
+   * DECISION: Use aggregation for flat response structure (matches design spec)
+   * 
+   * AGGREGATION PIPELINE STAGES:
+   * 
+   * Stage 1: $match - Filter submissions by userId
+   * - Narrows dataset to single user's submissions
+   * - Uses index on userId for fast filtering
+   * - Equivalent to: WHERE userId = ?
+   * 
+   * Stage 2: $lookup - Join with problems collection
+   * - Performs LEFT JOIN to fetch problem details
+   * - Matches submission.problemId with problem._id
+   * - Creates array field 'problem' with matching problem document
+   * - Equivalent to: LEFT JOIN problems ON submissions.problemId = problems._id
+   * 
+   * Stage 3: $unwind - Convert problem array to object
+   * - $lookup returns array (even for single match)
+   * - $unwind converts [{ title: 'Two Sum' }] to { title: 'Two Sum' }
+   * - preserveNullAndEmptyArrays: true keeps submissions even if problem deleted
+   * 
+   * Stage 4: $project - Shape the output
+   * - Include submission fields: _id, verdict, executionTime, memoryUsed, language, createdAt
+   * - Exclude code field (security + performance)
+   * - Flatten problem fields: problemId, problemTitle, problemSlug
+   * - Equivalent to: SELECT _id, verdict, ..., problem.title AS problemTitle
+   * 
+   * Stage 5: $sort - Order by newest first
+   * - Sort by createdAt descending (-1)
+   * - Most recent submissions appear first
+   * - Equivalent to: ORDER BY createdAt DESC
+   * 
+   * RESPONSE FORMAT:
+   * Returns flat structure matching design spec:
+   * ```javascript
+   * {
+   *   count: 2,
+   *   submissions: [
+   *     {
+   *       _id: '507f...',
+   *       verdict: 'AC',
+   *       executionTime: 45,
+   *       memoryUsed: 2048,
+   *       language: 'python',
+   *       createdAt: '2024-01-15T10:35:00.000Z',
+   *       problemId: '507f...',
+   *       problemTitle: 'Two Sum',
+   *       problemSlug: 'two-sum'
+   *     },
+   *     ...
+   *   ]
+   * }
+   * ```
+   * 
+   * SECURITY CONSIDERATIONS:
+   * - Code field is excluded (users should only see code in detail view)
+   * - Filtered by userId (users only see their own submissions)
+   * - Problem details are public info (title, slug) - safe to expose
+   * 
+   * PERFORMANCE CONSIDERATIONS:
+   * - Uses index on userId for fast filtering (O(log n) lookup)
+   * - $lookup performs indexed join on problemId (O(log n) per submission)
+   * - Excludes code field to reduce payload size (10KB+ per submission)
+   * - For 100 submissions: ~10KB response vs ~1MB with code
+   * 
+   * EDGE CASES:
+   * - User has no submissions: Returns { count: 0, submissions: [] }
+   * - Problem was deleted: preserveNullAndEmptyArrays keeps submission with null problem fields
+   * - Problem is draft/rejected: Still included (user submitted to it, should see history)
+   * 
+   * TYPICAL USE CASES:
+   * 
+   * 1. **All Submissions Page**:
+   *    - Show user's complete submission history
+   *    - Display problem name and link to problem page
+   *    - Filter by verdict (AC, WA, TLE, etc.)
+   * 
+   * 2. **Progress Tracking**:
+   *    - See which problems user attempted
+   *    - Track success rate across all problems
+   *    - Identify patterns (always TLE, never AC)
+   * 
+   * 3. **Analytics**:
+   *    - Calculate overall AC rate
+   *    - Track average execution time
+   *    - Identify most attempted problems
+   * 
+   * @param {string} userId - MongoDB ObjectId of the user (from JWT token)
+   * 
+   * @returns {Promise<{count: number, submissions: Array<Object>}>}
+   *   - count: Total number of submissions
+   *   - submissions: Array of submission objects with problem details
+   *     Each submission contains:
+   *     - _id: Submission ID
+   *     - verdict: 'PENDING' | 'AC' | 'WA' | 'TLE' | 'MLE' | 'RE' | 'CE'
+   *     - executionTime: Time in milliseconds (null if PENDING)
+   *     - memoryUsed: Memory in KB (null if PENDING)
+   *     - language: 'python' or 'cpp'
+   *     - createdAt: Submission timestamp
+   *     - problemId: Problem ID (ObjectId as string)
+   *     - problemTitle: Problem title (e.g., "Two Sum")
+   *     - problemSlug: Problem slug (e.g., "two-sum")
+   *     - code: EXCLUDED (use getSubmission to fetch code)
+   * 
+   * @example
+   * // Get all submissions for a user
+   * const result = await submissionsService.getAllSubmissionsWithProblemDetails(
+   *   '507f1f77bcf86cd799439011'  // userId
+   * );
+   * // Returns: {
+   * //   count: 2,
+   * //   submissions: [
+   * //     {
+   * //       _id: '507f...',
+   * //       verdict: 'AC',
+   * //       executionTime: 45,
+   * //       memoryUsed: 2048,
+   * //       language: 'python',
+   * //       createdAt: '2024-01-15T10:35:00.000Z',
+   * //       problemId: '507f...',
+   * //       problemTitle: 'Two Sum',
+   * //       problemSlug: 'two-sum'
+   * //     },
+   * //     {
+   * //       _id: '507f...',
+   * //       verdict: 'WA',
+   * //       executionTime: 50,
+   * //       memoryUsed: 1800,
+   * //       language: 'cpp',
+   * //       createdAt: '2024-01-15T10:30:00.000Z',
+   * //       problemId: '507f...',
+   * //       problemTitle: 'Binary Search',
+   * //       problemSlug: 'binary-search'
+   * //     }
+   * //   ]
+   * // }
+   * 
+   * @example
+   * // User with no submissions
+   * const result = await submissionsService.getAllSubmissionsWithProblemDetails(userId);
+   * // Returns: { count: 0, submissions: [] }
+   */
+  async getAllSubmissionsWithProblemDetails(userId) {
+    // Convert userId string to ObjectId for aggregation pipeline
+    // Aggregation requires ObjectId type, not string
+    const mongoose = require('mongoose');
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    
+    // MongoDB Aggregation Pipeline
+    // Performs JOIN between submissions and problems collections
+    const submissions = await Submission.aggregate([
+      // Stage 1: Filter submissions by userId
+      // Uses index on userId for fast filtering
+      {
+        $match: {
+          userId: userObjectId
+        }
+      },
+      
+      // Stage 2: Join with problems collection
+      // LEFT JOIN to fetch problem details (title, slug)
+      {
+        $lookup: {
+          from: 'problems',           // Collection to join with
+          localField: 'problemId',    // Field in submissions collection
+          foreignField: '_id',        // Field in problems collection
+          as: 'problem'               // Output array field name
+        }
+      },
+      
+      // Stage 3: Convert problem array to object
+      // $lookup returns array, $unwind converts to object
+      // preserveNullAndEmptyArrays: true keeps submissions even if problem deleted
+      {
+        $unwind: {
+          path: '$problem',
+          preserveNullAndEmptyArrays: true  // Keep submission even if problem not found
+        }
+      },
+      
+      // Stage 4: Shape the output (projection)
+      // Include submission fields, exclude code, flatten problem fields
+      {
+        $project: {
+          _id: 1,                              // Submission ID
+          verdict: 1,                          // Verdict (AC, WA, TLE, etc.)
+          executionTime: 1,                    // Execution time in ms
+          memoryUsed: 1,                       // Memory used in KB
+          language: 1,                         // Language (cpp, python)
+          createdAt: 1,                        // Submission timestamp
+          problemId: '$problemId',             // Problem ID (keep original field)
+          problemTitle: '$problem.title',      // Flatten: problem.title → problemTitle
+          problemSlug: '$problem.slug'         // Flatten: problem.slug → problemSlug
+          // Note: code field is automatically excluded by only including specific fields
+        }
+      },
+      
+      // Stage 5: Sort by newest first
+      // Most recent submissions appear at the top
+      {
+        $sort: {
+          createdAt: -1  // Descending order (newest first)
+        }
+      }
+    ]);
+    
+    // Return response matching design spec format
+    return {
+      count: submissions.length,
+      submissions
+    };
+  }
+
   async updateVerdict(submissionId, verdict, executionTime, memoryUsed, compilerError = null) {
     const submission = await Submission.findByIdAndUpdate(
       submissionId,

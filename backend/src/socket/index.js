@@ -142,30 +142,37 @@ exports.initSocket = (httpServer) => {
   
   // Connection handler - runs when client successfully connects
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.username} (${socket.userId})`);
+    console.log(`✓ User connected: ${socket.username} (${socket.userId})`);
     
     // Automatically join personal room for verdict notifications
     // Room name format: user:{userId}
-    socket.join(`user:${socket.userId}`);
+    const roomName = `user:${socket.userId}`;
+    socket.join(roomName);
+    
+    // Log room joining for debugging
+    console.log(`✓ User ${socket.username} joined room: ${roomName}`);
+    console.log(`  Active rooms for this socket:`, Array.from(socket.rooms));
     
     // Handle contest room joins
     // Client emits this when viewing a contest page
     socket.on('join:contest', (contestId) => {
-      socket.join(`contest:${contestId}`);
-      console.log(`User ${socket.username} joined contest room: ${contestId}`);
+      const contestRoom = `contest:${contestId}`;
+      socket.join(contestRoom);
+      console.log(`✓ User ${socket.username} joined contest room: ${contestRoom}`);
     });
     
     // Handle contest room leaves
     // Client emits this when leaving contest page
     socket.on('leave:contest', (contestId) => {
-      socket.leave(`contest:${contestId}`);
-      console.log(`User ${socket.username} left contest room: ${contestId}`);
+      const contestRoom = `contest:${contestId}`;
+      socket.leave(contestRoom);
+      console.log(`✓ User ${socket.username} left contest room: ${contestRoom}`);
     });
     
     // Handle disconnection
     // Rooms are automatically cleaned up by Socket.io
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.username}`);
+      console.log(`✗ User disconnected: ${socket.username} (${socket.userId})`);
     });
   });
   

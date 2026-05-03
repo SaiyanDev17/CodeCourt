@@ -56,7 +56,7 @@ export default function LeaderboardPage({ params }: { params: { id: string } }) 
     const socket = connectSocket(accessToken)
 
     // Join the contest-specific room
-    socket.emit('join-contest', params.id)
+    socket.emit('join:contest', params.id)
 
     // Listen for leaderboard updates
     const handleLeaderboardUpdate = (event: LeaderboardUpdateEvent) => {
@@ -71,7 +71,7 @@ export default function LeaderboardPage({ params }: { params: { id: string } }) 
     // Cleanup on unmount
     return () => {
       socket.off('leaderboard:update', handleLeaderboardUpdate)
-      socket.emit('leave-contest', params.id)
+      socket.emit('leave:contest', params.id)
       disconnectSocket()
     }
   }, [params.id, accessToken])

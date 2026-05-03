@@ -77,7 +77,6 @@ const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-const { Readable } = require('stream');
 const AdmZip = require('adm-zip');
 const redis = require('../config/redis');
 const s3Client = require('../config/s3');
@@ -136,7 +135,8 @@ const worker = new Worker('submissions', async (job) => {
           submissionId,
           verdict: verdict.verdict,
           executionTime: verdict.executionTime,
-          memoryUsed: verdict.memoryUsed
+          memoryUsed: verdict.memoryUsed,
+          compilerError: verdict.compilerError
         }
       }));
     } catch (error) {
@@ -234,7 +234,7 @@ async function downloadTestCases(s3Key) {
     for (const entry of zipEntries) {
       if (entry.isDirectory) continue;
       
-      const fileName = entry.entryName;
+      const fileName = entry.entryName.split('/').pop(); // Strip directory prefix for subdirectory support
       // Accept .in/.txt for input, .out/.ans/.txt for output based on common CP formats
       const match = fileName.match(/^(.*)\.(in|out|txt|ans)$/i);
       
@@ -280,6 +280,36 @@ async function downloadTestCases(s3Key) {
   }
 }
 
+function getSandboxConfig(tmpDir) {
+  const volumeName = process.env.JUDGE_VOLUME_NAME;
+  if (!volumeName) {
+    return {
+      volumeArg: `${tmpDir}:/sandbox`,
+      workDir: '/sandbox'
+    };
+  }
+
+  const baseName = path.basename(tmpDir);
+  return {
+    volumeArg: `${volumeName}:/sandbox`,
+    workDir: path.posix.join('/sandbox', baseName)
+  };
+}
+
+async function createJudgeDir() {
+  const volumeName = process.env.JUDGE_VOLUME_NAME;
+  if (!volumeName) {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'judge-'));
+    await fs.chmod(tmpDir, 0o777);
+    return tmpDir;
+  }
+
+  const volumePath = process.env.JUDGE_VOLUME_PATH || '/judge-tmp';
+  const tmpDir = await fs.mkdtemp(path.join(volumePath, 'judge-'));
+  await fs.chmod(tmpDir, 0o777);
+  return tmpDir;
+}
+
 /**
  * Run judge in Docker container
  * 
@@ -305,7 +335,8 @@ async function runJudge(code, language, problem, testCases) {
   
   // Create temporary directory for this submission
   // Each submission gets isolated directory to prevent interference
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'judge-'));
+  const tmpDir = await createJudgeDir();
+  const sandbox = getSandboxConfig(tmpDir);
   
   try {
     // Write code to file in temporary directory
@@ -314,7 +345,7 @@ async function runJudge(code, language, problem, testCases) {
     
     // Compile if C++ (Python is interpreted, no compilation needed)
     if (language === 'cpp') {
-      const compileResult = await compileCode(tmpDir);
+      const compileResult = await compileCode(sandbox);
       if (!compileResult.success) {
         // Compilation failed - return CE verdict with compiler error message
         return {
@@ -333,7 +364,7 @@ async function runJudge(code, language, problem, testCases) {
     // This is standard competitive programming behavior
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      const result = await runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit);
+      const result = await runTestCase(tmpDir, sandbox, language, testCase, timeLimit, memoryLimit, problem);
       
       maxExecutionTime = Math.max(maxExecutionTime, result.executionTime);
       peakMemoryUsed = Math.max(peakMemoryUsed, result.memoryUsed);
@@ -361,12 +392,12 @@ async function runJudge(code, language, problem, testCases) {
 }
 
 /**
- * Compile C++ code in Docker container
+ * Compile C++ code in Docker container using custom judge image
  * 
- * Compiles C++ source code using g++ in a Docker container. Uses modern C++17
- * standard with O2 optimization (standard for competitive programming).
+ * Compiles C++ source code using the custom codecourt-judge-cpp image.
+ * The image contains g++ compiler and judge.sh script for execution.
  * 
- * @param {string} tmpDir - Temporary directory containing solution.cpp
+ * @param {Object} sandbox - Sandbox config with volumeArg and workDir
  * @returns {Promise<Object>} Compilation result: { success: boolean, error?: string }
  * 
  * Docker flags:
@@ -374,20 +405,20 @@ async function runJudge(code, language, problem, testCases) {
  * - -v: Mount tmpdir as /sandbox volume
  * - -w: Set working directory to /sandbox
  * 
- * g++ flags:
- * - -O2: Optimization level 2 (standard for CP)
- * - -std=c++17: Use C++17 standard
- * - -o solution: Output executable named 'solution'
+ * Uses codecourt-judge-cpp image which includes:
+ * - g++ compiler with C++17 support
+ * - Alpine Linux base (lightweight)
+ * - Non-root user for security
  */
-async function compileCode(tmpDir) {
+async function compileCode(sandbox) {
   return new Promise((resolve) => {
     const compile = spawn('docker', [
       'run',
       '--rm',
-      '-v', `${tmpDir}:/sandbox`,
-      '-w', '/sandbox',
-      'gcc:13',
-      'g++',
+      '-v', sandbox.volumeArg,
+      '-w', sandbox.workDir,
+      '--entrypoint', 'g++',
+      'codecourt-judge-cpp',
       '-O2',
       '-std=c++17',
       '-o', 'solution',
@@ -410,7 +441,7 @@ async function compileCode(tmpDir) {
     });
     
     compile.on('error', (error) => {
-      // Docker spawn error (e.g., Docker not running)
+      // Docker spawn error (e.g., Docker not running or image not built)
       resolve({ success: false, error: error.message });
     });
   });
@@ -423,6 +454,7 @@ async function compileCode(tmpDir) {
  * in an isolated Docker container with resource limits and network disabled.
  * 
  * @param {string} tmpDir - Temporary directory containing code/executable
+ * @param {Object} sandbox - Sandbox config with volumeArg and workDir
  * @param {string} language - Programming language ('cpp' or 'python')
  * @param {Object} testCase - Test case object: { input, output }
  * @param {number} timeLimit - Time limit in milliseconds
@@ -440,7 +472,7 @@ async function compileCode(tmpDir) {
  * - 137: OOM killed (MLE verdict)
  * - Other: Runtime error (RE verdict)
  */
-async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
+async function runTestCase(tmpDir, sandbox, language, testCase, timeLimit, memoryLimit, problem) {
   // Write input to file (not used currently, but useful for debugging)
   await fs.writeFile(path.join(tmpDir, 'input.txt'), testCase.input);
   
@@ -451,35 +483,32 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
   
   let dockerCmd;
   if (language === 'cpp') {
-    // Run compiled C++ executable
+    // Run compiled C++ executable using input.txt inside the container
     dockerCmd = [
       'run',
       '--rm',
       '--network', 'none', // Security: disable network access
       '--memory', `${memoryLimitMB}m`, // Memory limit
       '--cpus', '1', // CPU limit
-      '-v', `${tmpDir}:/sandbox`,
-      '-w', '/sandbox',
-      'gcc:13',
-      'timeout', // Use Alpine's timeout command
-      `${timeLimitSeconds}s`,
-      './solution'
+      '-v', sandbox.volumeArg,
+      '-w', sandbox.workDir,
+      '--entrypoint', 'sh',
+      'codecourt-judge-cpp',
+      '-c', `timeout ${timeLimitSeconds}s ./solution < input.txt`
     ];
   } else {
-    // Run Python script
+    // Run Python script using input.txt inside the container
     dockerCmd = [
       'run',
       '--rm',
       '--network', 'none', // Security: disable network access
       '--memory', `${memoryLimitMB}m`, // Memory limit
       '--cpus', '1', // CPU limit
-      '-v', `${tmpDir}:/sandbox`,
-      '-w', '/sandbox',
-      'python:3.11-alpine',
-      'timeout', // Use Alpine's timeout command
-      `${timeLimitSeconds}s`,
-      'python',
-      'solution.py'
+      '-v', sandbox.volumeArg,
+      '-w', sandbox.workDir,
+      '--entrypoint', 'sh',
+      'codecourt-judge-python',
+      '-c', `timeout ${timeLimitSeconds}s python3 solution.py < input.txt`
     ];
   }
   
@@ -490,10 +519,6 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
     
     let stdout = '';
     let stderr = '';
-    
-    // Pipe test case input to stdin
-    const inputStream = Readable.from([testCase.input]);
-    inputStream.pipe(run.stdin);
     
     run.stdout.on('data', (data) => {
       stdout += data.toString();
@@ -540,9 +565,8 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
       } else {
         // Exit code 0 - check output for correctness
         const actualOutput = stdout.trim();
-        const expectedOutput = testCase.output.trim();
         
-        if (actualOutput === expectedOutput) {
+        if (isOutputCorrect(problem, testCase, actualOutput)) {
           // Output matches - Accepted
           resolve({
             verdict: 'AC',
@@ -572,6 +596,47 @@ async function runTestCase(tmpDir, language, testCase, timeLimit, memoryLimit) {
       });
     });
   });
+}
+
+function isOutputCorrect(problem, testCase, actualOutput) {
+  if (problem && problem.slug === 'two-sum') {
+    return isTwoSumOutputCorrect(testCase.input, actualOutput);
+  }
+
+  const expectedOutput = testCase.output.trim();
+  return actualOutput === expectedOutput;
+}
+
+function isTwoSumOutputCorrect(input, actualOutput) {
+  const tokens = input.trim().split(/\s+/).map(Number);
+  if (tokens.length < 3) {
+    return false;
+  }
+
+  const n = tokens[0];
+  const nums = tokens.slice(1, 1 + n);
+  const target = tokens[1 + n];
+
+  if (!Number.isInteger(n) || nums.length !== n || typeof target !== 'number') {
+    return false;
+  }
+
+  const matches = actualOutput.match(/-?\d+/g);
+  if (!matches || matches.length !== 2) {
+    return false;
+  }
+
+  const i = Number(matches[0]);
+  const j = Number(matches[1]);
+  if (!Number.isInteger(i) || !Number.isInteger(j)) {
+    return false;
+  }
+
+  if (i < 0 || j < 0 || i >= n || j >= n || i === j) {
+    return false;
+  }
+
+  return nums[i] + nums[j] === target;
 }
 
 // Worker event handlers for monitoring and debugging

@@ -14,12 +14,22 @@
  */
 
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import api from '@/lib/api'
-import { Problem } from '@/types'
+import { Problem, Submission } from '@/types'
 import ProblemStatement from '@/components/Problem/ProblemStatement'
 import MonacoEditor from '@/components/Editor/MonacoEditor'
 import SubmitButton from '@/components/Editor/SubmitButton'
+import { SubmissionResult } from '@/components/Problem/SubmissionResult'
+import { useSubmission } from '@/hooks/useSubmission'
+import { SubmissionHistory } from '@/components/Submission/SubmissionHistory'
+
+type HintEntry = {
+  id: string
+  hintText: string
+  hintIndex: number
+  createdAt: string
+}
 
 export default function ProblemPage() {
   // ============================================================================
@@ -48,19 +58,84 @@ export default function ProblemPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  // Tab state for Problem vs Submissions view
+  const [activeTab, setActiveTab] = useState<'problem' | 'submissions' | 'hints'>('problem')
+  
+  // Scroll position preservation
+  const leftPanelRef = useRef<HTMLDivElement>(null)
+  const scrollPositions = useRef<{ problem: number; submissions: number; hints: number }>({
+    problem: 0,
+    submissions: 0,
+    hints: 0,
+  })
+  
   // Editor state
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState<'cpp' | 'python'>('cpp')
   
-  // Submission state
-  const [isJudging, setIsJudging] = useState(false)
+  // Submission state (real-time via Socket.io)
+  const {
+    submit,
+    currentSubmission,
+    verdict,
+    executionTime,
+    memoryUsed,
+    compilerError,
+    isJudging,
+    error: submissionError,
+    reset: resetSubmission,
+  } = useSubmission()
   
   // AI Hint state
-  const [hintText, setHintText] = useState<string | null>(null)
+  const [hints, setHints] = useState<HintEntry[]>([])
   const [hintsRemaining, setHintsRemaining] = useState<number>(3)
   const [isLoadingHint, setIsLoadingHint] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
-  const [showHintPanel, setShowHintPanel] = useState(false)
+  const [isLoadingHints, setIsLoadingHints] = useState(false)
+  const [hintsLoadError, setHintsLoadError] = useState<string | null>(null)
+  const [currentConsoleMessage, setCurrentConsoleMessage] = useState<string | null>(null)
+
+  const formatHintTime = (value?: string) => {
+    if (!value) return 'Just now'
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? 'Just now' : parsed.toLocaleString()
+  }
+
+  const loadHints = async (problemId: string) => {
+    try {
+      setIsLoadingHints(true)
+      setHintsLoadError(null)
+
+      const response = await api.get('/agent/my-hints', {
+        params: { problem_id: problemId },
+      })
+
+      const fetchedHints = (response.data?.hints || []).map((hint: any) => ({
+        id: hint.id || hint._id || `hint-${hint.hintIndex}`,
+        hintText: hint.hintText,
+        hintIndex: hint.hintIndex,
+        createdAt: hint.createdAt,
+      }))
+
+      setHints(fetchedHints)
+
+      if (typeof response.data?.hints_remaining === 'number') {
+        setHintsRemaining(response.data.hints_remaining)
+      } else if (typeof response.data?.hints_used === 'number') {
+        setHintsRemaining(Math.max(0, 3 - response.data.hints_used))
+      } else {
+        setHintsRemaining(Math.max(0, 3 - fetchedHints.length))
+      }
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setHintsLoadError('Log in to view saved hints')
+      } else {
+        setHintsLoadError('Failed to load hints')
+      }
+    } finally {
+      setIsLoadingHints(false)
+    }
+  }
   
   // ============================================================================
   // STEP 3: Fetch Problem Data
@@ -94,6 +169,58 @@ export default function ProblemPage() {
       fetchProblem()
     }
   }, [slug])
+
+  useEffect(() => {
+    if (!problem?._id) return
+    loadHints(problem._id)
+  }, [problem?._id])
+
+  useEffect(() => {
+    setCurrentConsoleMessage(compilerError)
+  }, [compilerError])
+
+  useEffect(() => {
+    if (!verdict || !currentSubmission?._id) {
+      return
+    }
+
+    let cancelled = false
+    const needsConsoleRefresh = verdict === 'CE' || verdict === 'RE'
+
+    const refreshCurrentSubmission = async () => {
+      const maxAttempts = needsConsoleRefresh ? 5 : 1
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const response = await api.get<{ submission: Submission }>(
+            `/submissions/${currentSubmission._id}`
+          )
+
+          if (cancelled) return
+
+          const message = response.data.submission.compilerError
+          if (message) {
+            setCurrentConsoleMessage(message)
+            return
+          }
+        } catch (err) {
+          console.error('Failed to refresh current submission details:', err)
+        }
+
+        if (!needsConsoleRefresh || cancelled) {
+          return
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+    }
+
+    refreshCurrentSubmission()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentSubmission?._id, verdict])
   
   // ============================================================================
   // STEP 4: Handle Editor Changes
@@ -111,16 +238,38 @@ export default function ProblemPage() {
   }
   
   // ============================================================================
+  // STEP 4.5: Handle Tab Switching with Scroll Position Preservation
+  // ============================================================================
+  
+  /**
+   * Save current scroll position before switching tabs
+   * Restore scroll position after switching tabs
+   */
+  const handleTabChange = (newTab: 'problem' | 'submissions' | 'hints') => {
+    // Save current scroll position
+    if (leftPanelRef.current) {
+      scrollPositions.current[activeTab] = leftPanelRef.current.scrollTop
+    }
+    
+    // Switch tab
+    setActiveTab(newTab)
+    
+    // Restore scroll position for new tab (after render)
+    setTimeout(() => {
+      if (leftPanelRef.current) {
+        leftPanelRef.current.scrollTop = scrollPositions.current[newTab]
+      }
+    }, 0)
+  }
+  
+  // ============================================================================
   // STEP 5: Handle Code Submission
   // ============================================================================
   
   /**
    * For now, just console.log the code and language
    * 
-   * In the future (Task 4.3.7), this will:
-   * 1. Call POST /api/submissions with { code, language, problemId }
-   * 2. Listen for verdict via Socket.io
-   * 3. Display the verdict in the UI
+   * Submits code to POST /api/submissions and listens for verdict via Socket.io.
    */
   /**
    * Handle code submission to the judge system
@@ -135,28 +284,11 @@ export default function ProblemPage() {
     }
     
     try {
-      setIsJudging(true)
-      
-      // Submit code to backend
-      const response = await api.post('/submissions', {
-        problemId: problem._id,
-        code: code,
-        language: language,
-        // contestId: contestId // Optional: add if in contest mode
-      })
-      
-      console.log('Submission queued:', response.data)
-      
-      // TODO: Listen for verdict via Socket.io
-      // For now, simulate judging and show message
-      setTimeout(() => {
-        setIsJudging(false)
-        alert(`Submission queued! Submission ID: ${response.data.submissionId}\n\nNote: Real-time verdict updates via Socket.io are not yet implemented. Check the Submissions page to see your result.`)
-      }, 2000)
-      
+      resetSubmission()
+      setCurrentConsoleMessage(null)
+      await submit(code, language, problem._id)
     } catch (err: any) {
       console.error('Submission failed:', err)
-      setIsJudging(false)
       
       if (err.response?.status === 401) {
         alert('Please log in to submit code')
@@ -199,13 +331,28 @@ export default function ProblemPage() {
         problem_slug: problem.slug,
       })
       
-      // Response format: { hint_text: string, hints_used: number }
-      const { hint_text, hints_used } = response.data
+      // Response format: { hint: string, hints_used: number, hint_index: number }
+      const { hint, hints_used, hint_index } = response.data
+      const nextHintIndex = hint_index || hints_used || hints.length + 1
       
       // Update state
-      setHintText(hint_text)
-      setHintsRemaining(3 - hints_used)
-      setShowHintPanel(true)
+      setHintsRemaining(Math.max(0, 3 - hints_used))
+      setHints((prev) => {
+        const exists = prev.some((entry) => entry.hintIndex === nextHintIndex)
+        if (exists) return prev
+
+        const next = [
+          ...prev,
+          {
+            id: `hint-${nextHintIndex}`,
+            hintText: hint,
+            hintIndex: nextHintIndex,
+            createdAt: new Date().toISOString(),
+          },
+        ]
+
+        return next.sort((a, b) => a.hintIndex - b.hintIndex)
+      })
       
     } catch (err: any) {
       console.error('Failed to get hint:', err)
@@ -215,6 +362,7 @@ export default function ProblemPage() {
         setHintError('Please log in to get hints')
       } else if (err.response?.status === 403) {
         setHintError("You've used all 3 hints for this problem")
+        setHintsRemaining(0)
       } else if (err.response?.status === 503 || err.code === 'ECONNREFUSED') {
         setHintError('AI service is currently unavailable. Please try again later.')
       } else {
@@ -299,84 +447,197 @@ export default function ProblemPage() {
    */
   
   return (
-    <div className="h-[calc(100vh-70px)] grid grid-cols-1 lg:grid-cols-2">
+    <div className="h-[calc(100vh-70px)] min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
       {/* ========================================================================
-          LEFT SIDE: Problem Statement
+          LEFT SIDE: Tabbed View (Problem Statement / Submission History)
           ======================================================================== */}
       
-      <div className="overflow-y-auto border-r border-gray-200 bg-white">
-        <div className="p-6 max-w-4xl">
-          {/* Problem Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {problem.title}
-            </h1>
-            
-            <div className="flex items-center gap-3">
-              {/* Difficulty Badge */}
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  !problem.difficulty
-                    ? 'bg-gray-100 text-gray-800'
-                    : problem.difficulty === 'easy'
-                    ? 'bg-green-100 text-green-800'
-                    : problem.difficulty === 'medium'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {problem.difficulty?.charAt(0).toUpperCase() + problem.difficulty?.slice(1) || 'Unknown'}
-              </span>
-              
-              {/* Time Limit */}
-              <span className="text-sm text-gray-600">
-                Time: {problem.timeLimit}ms
-              </span>
-              
-              {/* Memory Limit */}
-              <span className="text-sm text-gray-600">
-                Memory: {problem.memoryLimit}MB
-              </span>
-            </div>
+      <div className="flex min-h-0 flex-col h-full border-r border-gray-200 bg-white">
+        {/* Tab Headers - Sticky at top */}
+        <div className="border-b border-gray-200 sticky top-0 bg-white z-10 flex-shrink-0">
+          {/* Desktop: Tab Buttons (hidden on mobile) */}
+          <div className="hidden md:flex">
+            <button
+              onClick={() => handleTabChange('problem')}
+              className={`flex-1 px-4 py-3 font-medium transition-colors ${
+                activeTab === 'problem'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              aria-current={activeTab === 'problem' ? 'page' : undefined}
+            >
+              Problem
+            </button>
+            <button
+              onClick={() => handleTabChange('submissions')}
+              className={`flex-1 px-4 py-3 font-medium transition-colors ${
+                activeTab === 'submissions'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              aria-current={activeTab === 'submissions' ? 'page' : undefined}
+            >
+              Submissions
+            </button>
+            <button
+              onClick={() => handleTabChange('hints')}
+              className={`flex-1 px-4 py-3 font-medium transition-colors ${
+                activeTab === 'hints'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              aria-current={activeTab === 'hints' ? 'page' : undefined}
+            >
+              Hints
+            </button>
           </div>
           
-          {/* Problem Description (Markdown) */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">Description</h2>
-            <ProblemStatement markdownContent={problem.description} />
+          {/* Mobile: Dropdown Menu (hidden on desktop) */}
+          <div className="md:hidden px-4 py-3">
+            <select
+              value={activeTab}
+              onChange={(e) => handleTabChange(e.target.value as 'problem' | 'submissions' | 'hints')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              aria-label="Select tab"
+            >
+              <option value="problem">Problem</option>
+              <option value="submissions">Submissions</option>
+              <option value="hints">Hints</option>
+            </select>
           </div>
-          
-          {/* Constraints */}
-          {problem.constraints && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">Constraints</h2>
-              <ProblemStatement markdownContent={problem.constraints} />
-            </div>
-          )}
-          
-          {/* Sample Test Cases */}
-          {problem.sampleTestCases && problem.sampleTestCases.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">Sample Test Cases</h2>
-              {problem.sampleTestCases.map((testCase, index) => (
-                <div key={index} className="mb-4 bg-gray-50 rounded-lg p-4">
-                  <p className="font-medium text-gray-700 mb-2">Example {index + 1}</p>
+        </div>
+        
+        {/* Tab Content - Scrollable */}
+        <div ref={leftPanelRef} className="min-h-0 flex-1 overflow-y-auto">
+          {activeTab === 'problem' ? (
+            <div className="p-6 max-w-4xl">
+              {/* Problem Header */}
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  {problem.title}
+                </h1>
+                
+                <div className="flex items-center gap-3">
+                  {/* Difficulty Badge */}
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      !problem.difficulty
+                        ? 'bg-gray-100 text-gray-800'
+                        : problem.difficulty === 'easy'
+                        ? 'bg-green-100 text-green-800'
+                        : problem.difficulty === 'medium'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {problem.difficulty?.charAt(0).toUpperCase() + problem.difficulty?.slice(1) || 'Unknown'}
+                  </span>
                   
-                  <div className="mb-2">
-                    <p className="text-sm font-medium text-gray-600 mb-1">Input:</p>
-                    <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
-                      {testCase.input}
-                    </pre>
-                  </div>
+                  {/* Time Limit */}
+                  <span className="text-sm text-gray-600">
+                    Time: {problem.timeLimit}ms
+                  </span>
                   
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">Output:</p>
-                    <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
-                      {testCase.output}
-                    </pre>
-                  </div>
+                  {/* Memory Limit */}
+                  <span className="text-sm text-gray-600">
+                    Memory: {problem.memoryLimit}MB
+                  </span>
                 </div>
-              ))}
+              </div>
+              
+              {/* Problem Description (Markdown) */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-3">Description</h2>
+                <ProblemStatement markdownContent={problem.description} />
+              </div>
+              
+              {/* Constraints */}
+              {problem.constraints && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-3">Constraints</h2>
+                  <ProblemStatement markdownContent={problem.constraints} />
+                </div>
+              )}
+              
+              {/* Sample Test Cases */}
+              {problem.sampleTestCases && problem.sampleTestCases.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-3">Sample Test Cases</h2>
+                  {problem.sampleTestCases.map((testCase, index) => (
+                    <div key={index} className="mb-4 bg-gray-50 rounded-lg p-4">
+                      <p className="font-medium text-gray-700 mb-2">Example {index + 1}</p>
+                      
+                      <div className="mb-2">
+                        <p className="text-sm font-medium text-gray-600 mb-1">Input:</p>
+                        <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
+                          {testCase.input}
+                        </pre>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 mb-1">Output:</p>
+                        <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
+                          {testCase.output}
+                        </pre>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'submissions' ? (
+            <div className="p-6">
+              <SubmissionHistory problemId={problem._id} />
+            </div>
+          ) : (
+            <div className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-gray-900">Hints</h2>
+                <span className="text-xs text-gray-500">
+                  {Math.max(0, 3 - hintsRemaining)}/3 used
+                </span>
+              </div>
+
+              {isLoadingHints && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                  Loading hints...
+                </div>
+              )}
+
+              {!isLoadingHints && hintsLoadError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {hintsLoadError}
+                </div>
+              )}
+
+              {!isLoadingHints && !hintsLoadError && hints.length === 0 && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                  No hints yet. Use the "Get AI Hint" button on the right to generate one.
+                </div>
+              )}
+
+              {!isLoadingHints && !hintsLoadError && hints.length > 0 && (
+                <div className="space-y-4">
+                  {hints.map((hint) => (
+                    <div
+                      key={hint.id}
+                      className="rounded-xl border border-blue-200 bg-blue-50 p-4"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-blue-900">
+                          AI Hint {hint.hintIndex}/3
+                        </div>
+                        <span className="text-xs text-blue-700">
+                          {formatHintTime(hint.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                        {hint.hintText}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -386,45 +647,16 @@ export default function ProblemPage() {
           RIGHT SIDE: Code Editor + Submit Button
           ======================================================================== */}
       
-      <div className="flex flex-col h-full bg-gray-50">
-        {/* AI Hint Panel - Collapsible, appears above editor when hint exists */}
-        {showHintPanel && hintText && (
-          <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="font-semibold text-blue-900">AI Hint</h3>
-                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                  {hintsRemaining}/3 remaining
-                </span>
-              </div>
-              <button
-                onClick={() => setShowHintPanel(false)}
-                className="text-blue-600 hover:text-blue-800"
-                aria-label="Close hint panel"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="text-sm text-blue-900 bg-white rounded p-3 border border-blue-200">
-              {hintText}
-            </div>
-          </div>
-        )}
-        
+      <div className="flex min-h-0 flex-col h-full overflow-hidden bg-gray-50">
         {/* Editor Container - Takes remaining space with explicit height */}
-        <div className="flex-1 p-4 h-full min-h-0">
+        <div className="min-h-0 flex-1 overflow-hidden p-4">
           <MonacoEditor
             onChange={handleEditorChange}
           />
         </div>
         
         {/* Submit Button + AI Hint Button - Fixed at bottom */}
-        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white space-y-3">
+        <div className="max-h-[45vh] flex-shrink-0 overflow-y-auto p-4 border-t border-gray-200 bg-white space-y-3">
           {/* Submit Button */}
           <SubmitButton
             onSubmit={handleSubmit}
@@ -439,6 +671,39 @@ export default function ProblemPage() {
               : 'Click submit to test your solution'
             }
           </p>
+
+          {/* Real-time verdict result */}
+          {verdict && (
+            <SubmissionResult
+              verdict={verdict}
+              testCases={[]}
+              executionTime={executionTime}
+              memoryUsed={memoryUsed}
+              compilerError={null}
+            />
+          )}
+
+          {verdict && (
+            <div className="rounded-lg border border-gray-200 bg-gray-950 text-gray-100">
+              <div className="flex items-center justify-between border-b border-gray-800 px-4 py-2">
+                <h3 className="text-sm font-semibold">
+                  Compiler / Console Message
+                </h3>
+                <span className="text-xs text-gray-400">
+                  Current submission
+                </span>
+              </div>
+              <pre className="max-h-48 overflow-auto whitespace-pre-wrap p-4 font-mono text-sm leading-6">
+                {currentConsoleMessage || 'No compiler or runtime message was returned for this submission.'}
+              </pre>
+            </div>
+          )}
+
+          {submissionError && !verdict && (
+            <p className="text-xs text-red-600 text-center">
+              {submissionError}
+            </p>
+          )}
           
           {/* Divider */}
           <div className="border-t border-gray-200 pt-3">
@@ -480,7 +745,7 @@ export default function ProblemPage() {
             {/* Hint info text */}
             {!hintError && hintsRemaining > 0 && (
               <p className="text-xs text-gray-500 text-center mt-2">
-                Get a helpful hint from our AI assistant
+                Hints appear in the "Hints" tab on the left
               </p>
             )}
           </div>
@@ -501,6 +766,7 @@ export default function ProblemPage() {
  * needing the backend running
  */
 const DUMMY_PROBLEM: Problem = {
+  _id: 'dummy-1',
   id: 'dummy-1',
   title: 'Two Sum',
   slug: 'two-sum',
