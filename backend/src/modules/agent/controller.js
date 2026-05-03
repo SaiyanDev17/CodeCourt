@@ -71,6 +71,79 @@ exports.getHintCount = async (req, res, next) => {
 };
 
 /**
+ * Get previously generated hints for a user/problem pair.
+ * Called by the AI service so the next hint can avoid repeating earlier ones.
+ */
+exports.getHints = async (req, res, next) => {
+  try {
+    const { user_id, problem_id } = req.query;
+
+    if (!user_id || !problem_id) {
+      return res.status(400).json({
+        error: 'Missing required query parameters: user_id and problem_id'
+      });
+    }
+
+    const hints = await Hint.find({
+      userId: user_id,
+      problemId: problem_id
+    })
+      .sort({ hintIndex: 1, createdAt: 1 })
+      .lean();
+
+    res.json({
+      count: hints.length,
+      hints: hints.map(hint => ({
+        id: hint._id,
+        hintText: hint.hintText,
+        hintIndex: hint.hintIndex,
+        createdAt: hint.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get hints for the authenticated user/problem pair.
+ * Used by the frontend to show already-used hints instead of a dead-end error.
+ */
+exports.getMyHints = async (req, res, next) => {
+  try {
+    const { problem_id } = req.query;
+    const user_id = req.user.id;
+
+    if (!problem_id) {
+      return res.status(400).json({
+        error: 'Missing required query parameter: problem_id'
+      });
+    }
+
+    const hints = await Hint.find({
+      userId: user_id,
+      problemId: problem_id
+    })
+      .sort({ hintIndex: 1, createdAt: 1 })
+      .lean();
+
+    res.json({
+      count: hints.length,
+      hints_used: hints.length,
+      hints_remaining: Math.max(0, 3 - hints.length),
+      hints: hints.map(hint => ({
+        id: hint._id,
+        hintText: hint.hintText,
+        hintIndex: hint.hintIndex,
+        createdAt: hint.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Save hint and increment count
  * POST /api/agent/save-hint
  * 
@@ -141,6 +214,7 @@ exports.saveHint = async (req, res, next) => {
         createdAt: hint.createdAt
       },
       hints_used: newHintIndex,
+      hint_index: newHintIndex,
       hints_remaining: 3 - newHintIndex
     });
   } catch (error) {

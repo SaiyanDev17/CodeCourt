@@ -190,13 +190,22 @@ class HintResponse(BaseModel):
         le=3,  # le = "less than or equal to" — cannot exceed 3
         example=2
     )
+
+    hint_index: int = Field(
+        ...,
+        description="The generated hint number for this request (1, 2, or 3)",
+        ge=1,
+        le=3,
+        example=2
+    )
     
     # PYDANTIC CONFIG
     class Config:
         schema_extra = {
             "example": {
                 "hint": "Think about the time complexity of your current approach. Can you reduce it by storing intermediate results?",
-                "hints_used": 2
+                "hints_used": 2,
+                "hint_index": 2
             }
         }
 

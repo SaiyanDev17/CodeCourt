@@ -2,6 +2,7 @@
 Pytest configuration and fixtures for AI service tests
 """
 import pytest
+import importlib.util
 from unittest.mock import MagicMock
 
 
@@ -11,6 +12,9 @@ def mock_agent_executor(monkeypatch):
     Mock the agent executor to prevent import-time initialization during tests.
     This fixture runs automatically for all tests.
     """
+    if importlib.util.find_spec("langchain_groq") is None:
+        return None
+
     # Mock the create_agent_executor function before any imports
     mock_executor = MagicMock()
     mock_executor.ainvoke = MagicMock(return_value={

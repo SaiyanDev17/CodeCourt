@@ -140,8 +140,12 @@ export interface HintRequest {
 
 export interface HintResponse {
   hint: string;
-  hintsUsed: number;
-  hintsRemaining: number;
+  hints_used?: number;
+  hints_remaining?: number;
+  hint_index?: number;
+  hintsUsed?: number;
+  hintsRemaining?: number;
+  hintIndex?: number;
 }
 
 // ============================================================================
