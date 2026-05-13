@@ -231,6 +231,12 @@ export default function HomePage() {
             setLeaderboard([])
           }
         }
+      } catch (err) {
+        console.error('Failed to load homepage data:', err)
+        // Gracefully fallback to empty states so the UI doesn't crash
+        setContests([])
+        setProblems([])
+        setLeaderboard([])
       } finally {
         setLoading(false)
       }
