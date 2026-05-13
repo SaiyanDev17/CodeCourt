@@ -316,14 +316,14 @@ export default function LoginPage() {
   // ============================================================================
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="w-full">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-slate-100">
             Welcome to CodeCourt
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-slate-400">
             Sign in to your account to continue
           </p>
         </div>
@@ -335,7 +335,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Email Address
               </label>
@@ -347,7 +347,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="you@example.com"
                 disabled={isLoading}
               />
@@ -357,7 +357,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Password
               </label>
@@ -369,7 +369,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="••••••••"
                 disabled={isLoading}
               />
@@ -378,7 +378,7 @@ export default function LoginPage() {
           
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-500/10 border border-red-400/40 text-red-300 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
@@ -395,11 +395,11 @@ export default function LoginPage() {
           </Button>
           
           {/* Register Link */}
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-slate-400">
             Don't have an account?{' '}
             <Link
               href="/register"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-cyan-300 hover:text-cyan-200"
             >
               Sign up
             </Link>

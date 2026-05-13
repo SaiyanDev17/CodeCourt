@@ -303,14 +303,14 @@ export default function RegisterPage() {
   // ============================================================================
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="w-full">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-slate-100">
             Create Your Account
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-slate-400">
             Join CodeCourt and start competing today
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Username
               </label>
@@ -334,11 +334,11 @@ export default function RegisterPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="johndoe"
                 disabled={isLoading}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-slate-500">
                 At least 3 characters, letters and numbers only
               </p>
             </div>
@@ -347,7 +347,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Email Address
               </label>
@@ -359,7 +359,7 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="you@example.com"
                 disabled={isLoading}
               />
@@ -369,7 +369,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Password
               </label>
@@ -381,11 +381,11 @@ export default function RegisterPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="••••••••"
                 disabled={isLoading}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-slate-500">
                 At least 8 characters
               </p>
             </div>
@@ -394,7 +394,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-slate-300 mb-1"
               >
                 Confirm Password
               </label>
@@ -406,7 +406,7 @@ export default function RegisterPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-slate-600 rounded-xl bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                 placeholder="••••••••"
                 disabled={isLoading}
               />
@@ -415,7 +415,7 @@ export default function RegisterPage() {
           
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-500/10 border border-red-400/40 text-red-300 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
@@ -432,11 +432,11 @@ export default function RegisterPage() {
           </Button>
           
           {/* Login Link */}
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-slate-400">
             Already have an account?{' '}
             <Link
               href="/login"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-cyan-300 hover:text-cyan-200"
             >
               Sign in
             </Link>

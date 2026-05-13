@@ -14,16 +14,16 @@ export default function ProblemCard({ problem }: ProblemCardProps) {
   return (
     <Link
       href={`/problems/${problem.slug}`}
-      className="block p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200"
+      className="glass-panel glass-panel-hover block rounded-2xl p-6"
     >
       <div className="flex items-start justify-between gap-4">
-        <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+        <h3 className="text-lg font-semibold text-slate-100 hover:text-cyan-300 transition-colors">
           {problem.title}
         </h3>
         <Badge variant={problem.difficulty} size="sm" />
       </div>
       
-      <p className="mt-2 text-sm text-gray-500">
+      <p className="mt-2 text-sm text-slate-400">
         Time: {problem.timeLimit}ms | Memory: {problem.memoryLimit}MB
       </p>
     </Link>
