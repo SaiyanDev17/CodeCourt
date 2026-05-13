@@ -43,6 +43,10 @@ describe('Preservation Properties: Index Performance and BullMQ Reliability', ()
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/codecourt-test';
     mongoConnection = await mongoose.connect(mongoUri);
     
+    // FORCE index creation before tests run
+    await User.syncIndexes();
+    await Problem.syncIndexes();
+    
     // Connect to Redis
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     redisClient = new Redis(redisUrl);
