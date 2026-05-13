@@ -89,24 +89,24 @@ export default function MonacoEditor({
   }
 
   return (
-    <div className="h-full flex flex-col border rounded-lg overflow-hidden">
+    <div className="h-full flex flex-col rounded-2xl border border-slate-700/70 bg-slate-950/70 shadow-[0_12px_30px_rgba(2,6,23,0.45)] overflow-hidden backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/35">
       {/* Language Selector */}
-      <div className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b flex items-center gap-2">
-        <label htmlFor="language-select" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div className="flex-shrink-0 bg-slate-900/85 px-4 py-2.5 border-b border-slate-700/70 flex items-center gap-2">
+        <label htmlFor="language-select" className="text-sm font-medium text-slate-300">
           Language:
         </label>
         <select
           id="language-select"
           value={language}
           onChange={(e) => handleLanguageChange(e.target.value as 'cpp' | 'python')}
-          className="px-3 py-1 border rounded-md text-sm bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-1.5 border border-slate-600 rounded-lg text-sm bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
         >
           <option value="cpp">C++</option>
           <option value="python">Python</option>
         </select>
         
         {/* Visual indicator showing code is preserved per language */}
-        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+        <span className="ml-auto text-xs text-slate-400">
           {codeByLanguage.cpp !== BOILERPLATES.cpp && '🔵 C++ modified'}
           {codeByLanguage.cpp !== BOILERPLATES.cpp && codeByLanguage.python !== BOILERPLATES.python && ' • '}
           {codeByLanguage.python !== BOILERPLATES.python && '🟢 Python modified'}

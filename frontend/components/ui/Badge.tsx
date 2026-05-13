@@ -36,26 +36,26 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
  */
 const variantStyles: Record<string, string> = {
   // ── Judge verdicts ──────────────────────────────────────────
-  AC:      'bg-green-100  text-green-800',
-  WA:      'bg-red-100    text-red-800',
-  TLE:     'bg-yellow-100 text-yellow-800',
-  MLE:     'bg-orange-100 text-orange-800',
-  RE:      'bg-purple-100 text-purple-800',
-  CE:      'bg-pink-100   text-pink-800',
-  PENDING: 'bg-gray-100   text-gray-500',
+  AC:      'bg-emerald-500/15  text-emerald-300 border border-emerald-400/35',
+  WA:      'bg-red-500/15      text-red-300 border border-red-400/35',
+  TLE:     'bg-amber-500/15    text-amber-300 border border-amber-400/35',
+  MLE:     'bg-orange-500/15   text-orange-300 border border-orange-400/35',
+  RE:      'bg-purple-500/15   text-purple-300 border border-purple-400/35',
+  CE:      'bg-pink-500/15     text-pink-300 border border-pink-400/35',
+  PENDING: 'bg-slate-500/20    text-slate-300 border border-slate-400/35',
 
   // ── Difficulty ───────────────────────────────────────────────
-  easy:   'bg-emerald-100 text-emerald-800',
-  medium: 'bg-amber-100   text-amber-800',
-  hard:   'bg-rose-100    text-rose-800',
+  easy:   'bg-emerald-500/15 text-emerald-300 border border-emerald-400/35',
+  medium: 'bg-amber-500/15   text-amber-300 border border-amber-400/35',
+  hard:   'bg-rose-500/15    text-rose-300 border border-rose-400/35',
 
   // ── Contest status ───────────────────────────────────────────
-  upcoming: 'bg-blue-100  text-blue-800',
-  ongoing:  'bg-green-100 text-green-800',
-  ended:    'bg-gray-100  text-gray-600',
+  upcoming: 'bg-blue-500/15  text-blue-300 border border-blue-400/35',
+  ongoing:  'bg-cyan-500/15  text-cyan-300 border border-cyan-400/35',
+  ended:    'bg-slate-500/20 text-slate-300 border border-slate-400/35',
 
   // ── Fallback ─────────────────────────────────────────────────
-  default: 'bg-gray-100 text-gray-700',
+  default: 'bg-slate-500/20 text-slate-200 border border-slate-400/35',
 }
 
 const sizeClasses: Record<BadgeSize, string> = {
@@ -84,7 +84,7 @@ export default function Badge({
     <span
       className={twMerge(
         clsx(
-          'inline-flex items-center justify-center rounded-full font-semibold tracking-wide',
+          'inline-flex items-center justify-center rounded-full font-semibold tracking-wide backdrop-blur-sm',
           colorClasses,
           sizeClasses[size],
           className

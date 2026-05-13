@@ -382,8 +382,8 @@ export default function ProblemPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading problem...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading problem...</p>
         </div>
       </div>
     )
@@ -393,10 +393,10 @@ export default function ProblemPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <p className="text-red-300 text-lg mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 rounded-lg hover:from-cyan-300 hover:to-blue-400 transition-all"
           >
             Retry
           </button>
@@ -408,7 +408,7 @@ export default function ProblemPage() {
   if (!problem) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Problem not found</p>
+        <p className="text-slate-400">Problem not found</p>
       </div>
     )
   }
@@ -447,22 +447,22 @@ export default function ProblemPage() {
    */
   
   return (
-    <div className="h-[calc(100vh-70px)] min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+    <div className="h-[calc(100vh-76px)] min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-1">
       {/* ========================================================================
           LEFT SIDE: Tabbed View (Problem Statement / Submission History)
           ======================================================================== */}
       
-      <div className="flex min-h-0 flex-col h-full border-r border-gray-200 bg-white">
+      <div className="glass-panel flex min-h-0 flex-col h-full rounded-none lg:rounded-r-none border-r border-slate-700/70 bg-slate-950/75">
         {/* Tab Headers - Sticky at top */}
-        <div className="border-b border-gray-200 sticky top-0 bg-white z-10 flex-shrink-0">
+        <div className="border-b border-slate-700/70 sticky top-0 bg-slate-950/90 z-10 flex-shrink-0 backdrop-blur-sm">
           {/* Desktop: Tab Buttons (hidden on mobile) */}
           <div className="hidden md:flex">
             <button
               onClick={() => handleTabChange('problem')}
               className={`flex-1 px-4 py-3 font-medium transition-colors ${
                 activeTab === 'problem'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 shadow-[inset_0_-2px_8px_rgba(34,211,238,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
               aria-current={activeTab === 'problem' ? 'page' : undefined}
             >
@@ -472,8 +472,8 @@ export default function ProblemPage() {
               onClick={() => handleTabChange('submissions')}
               className={`flex-1 px-4 py-3 font-medium transition-colors ${
                 activeTab === 'submissions'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 shadow-[inset_0_-2px_8px_rgba(34,211,238,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
               aria-current={activeTab === 'submissions' ? 'page' : undefined}
             >
@@ -483,8 +483,8 @@ export default function ProblemPage() {
               onClick={() => handleTabChange('hints')}
               className={`flex-1 px-4 py-3 font-medium transition-colors ${
                 activeTab === 'hints'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 shadow-[inset_0_-2px_8px_rgba(34,211,238,0.15)]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
               aria-current={activeTab === 'hints' ? 'page' : undefined}
             >
@@ -497,7 +497,7 @@ export default function ProblemPage() {
             <select
               value={activeTab}
               onChange={(e) => handleTabChange(e.target.value as 'problem' | 'submissions' | 'hints')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900 text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
               aria-label="Select tab"
             >
               <option value="problem">Problem</option>
@@ -513,7 +513,7 @@ export default function ProblemPage() {
             <div className="p-6 max-w-4xl">
               {/* Problem Header */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-3xl font-bold text-slate-100 mb-2">
                   {problem.title}
                 </h1>
                 
@@ -522,24 +522,24 @@ export default function ProblemPage() {
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
                       !problem.difficulty
-                        ? 'bg-gray-100 text-gray-800'
+                        ? 'bg-slate-600/20 text-slate-200 border border-slate-400/30'
                         : problem.difficulty === 'easy'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/35'
                         : problem.difficulty === 'medium'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-400/35'
+                        : 'bg-red-500/15 text-red-300 border border-red-400/35'
                     }`}
                   >
                     {problem.difficulty?.charAt(0).toUpperCase() + problem.difficulty?.slice(1) || 'Unknown'}
                   </span>
                   
                   {/* Time Limit */}
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-slate-400">
                     Time: {problem.timeLimit}ms
                   </span>
                   
                   {/* Memory Limit */}
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-slate-400">
                     Memory: {problem.memoryLimit}MB
                   </span>
                 </div>
@@ -547,14 +547,14 @@ export default function ProblemPage() {
               
               {/* Problem Description (Markdown) */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-3">Description</h2>
+                <h2 className="text-xl font-bold text-cyan-300 mb-4 tracking-wide border-b border-slate-700/50 pb-2">Description</h2>
                 <ProblemStatement markdownContent={problem.description} />
               </div>
               
               {/* Constraints */}
               {problem.constraints && (
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-3">Constraints</h2>
+                  <h2 className="text-xl font-bold text-cyan-300 mb-4 tracking-wide border-b border-slate-700/50 pb-2">Constraints</h2>
                   <ProblemStatement markdownContent={problem.constraints} />
                 </div>
               )}
@@ -562,21 +562,21 @@ export default function ProblemPage() {
               {/* Sample Test Cases */}
               {problem.sampleTestCases && problem.sampleTestCases.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-3">Sample Test Cases</h2>
+                  <h2 className="text-xl font-bold text-cyan-300 mb-4 tracking-wide border-b border-slate-700/50 pb-2">Sample Test Cases</h2>
                   {problem.sampleTestCases.map((testCase, index) => (
-                    <div key={index} className="mb-4 bg-gray-50 rounded-lg p-4">
-                      <p className="font-medium text-gray-700 mb-2">Example {index + 1}</p>
+                    <div key={index} className="mb-6 bg-slate-900/60 border border-slate-700/80 rounded-xl p-5 shadow-sm">
+                      <p className="font-semibold text-slate-100 mb-3 text-lg flex items-center gap-2"><span className="w-1.5 h-4 bg-cyan-400 rounded-full inline-block"></span>Example {index + 1}</p>
                       
                       <div className="mb-2">
-                        <p className="text-sm font-medium text-gray-600 mb-1">Input:</p>
-                        <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
+                        <p className="text-sm font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Input:</p>
+                        <pre className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-sm text-cyan-100 overflow-x-auto font-mono shadow-inner">
                           {testCase.input}
                         </pre>
                       </div>
                       
                       <div>
-                        <p className="text-sm font-medium text-gray-600 mb-1">Output:</p>
-                        <pre className="bg-white p-2 rounded border border-gray-200 text-sm overflow-x-auto">
+                        <p className="text-sm font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Output:</p>
+                        <pre className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-sm text-cyan-100 overflow-x-auto font-mono shadow-inner">
                           {testCase.output}
                         </pre>
                       </div>
@@ -592,14 +592,14 @@ export default function ProblemPage() {
           ) : (
             <div className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-gray-900">Hints</h2>
-                <span className="text-xs text-gray-500">
+                <h2 className="text-2xl font-bold text-amber-300 tracking-wide">Hints</h2>
+                <span className="text-xs text-slate-400">
                   {Math.max(0, 3 - hintsRemaining)}/3 used
                 </span>
               </div>
 
               {isLoadingHints && (
-                <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-300">
                   Loading hints...
                 </div>
               )}
@@ -611,7 +611,7 @@ export default function ProblemPage() {
               )}
 
               {!isLoadingHints && !hintsLoadError && hints.length === 0 && (
-                <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-300">
                   No hints yet. Use the "Get AI Hint" button on the right to generate one.
                 </div>
               )}
@@ -621,17 +621,17 @@ export default function ProblemPage() {
                   {hints.map((hint) => (
                     <div
                       key={hint.id}
-                      className="rounded-xl border border-blue-200 bg-blue-50 p-4"
+                      className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4 backdrop-blur-sm"
                     >
                       <div className="mb-2 flex items-center justify-between">
-                        <div className="text-sm font-semibold text-blue-900">
+                        <div className="text-sm font-semibold text-cyan-200">
                           AI Hint {hint.hintIndex}/3
                         </div>
-                        <span className="text-xs text-blue-700">
+                        <span className="text-xs text-cyan-300/80">
                           {formatHintTime(hint.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                      <p className="text-sm text-cyan-100 whitespace-pre-wrap">
                         {hint.hintText}
                       </p>
                     </div>
@@ -647,7 +647,7 @@ export default function ProblemPage() {
           RIGHT SIDE: Code Editor + Submit Button
           ======================================================================== */}
       
-      <div className="flex min-h-0 flex-col h-full overflow-hidden bg-gray-50">
+      <div className="flex min-h-0 flex-col h-full overflow-hidden bg-slate-950/70 border-l border-slate-700/60">
         {/* Editor Container - Takes remaining space with explicit height */}
         <div className="min-h-0 flex-1 overflow-hidden p-4">
           <MonacoEditor
@@ -656,7 +656,7 @@ export default function ProblemPage() {
         </div>
         
         {/* Submit Button + AI Hint Button - Fixed at bottom */}
-        <div className="max-h-[45vh] flex-shrink-0 overflow-y-auto p-4 border-t border-gray-200 bg-white space-y-3">
+        <div className="max-h-[45vh] flex-shrink-0 overflow-y-auto p-4 border-t border-slate-700/70 bg-slate-950/85 space-y-3">
           {/* Submit Button */}
           <SubmitButton
             onSubmit={handleSubmit}
@@ -665,7 +665,7 @@ export default function ProblemPage() {
           />
           
           {/* Helper text for submission */}
-          <p className="text-xs text-gray-500 text-center">
+          <p className="text-xs text-slate-400 text-center">
             {isJudging 
               ? 'Your code is being judged...' 
               : 'Click submit to test your solution'
@@ -684,12 +684,12 @@ export default function ProblemPage() {
           )}
 
           {verdict && (
-            <div className="rounded-lg border border-gray-200 bg-gray-950 text-gray-100">
-              <div className="flex items-center justify-between border-b border-gray-800 px-4 py-2">
+            <div className="rounded-lg border border-slate-700 bg-slate-950 text-slate-100">
+              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">
                 <h3 className="text-sm font-semibold">
                   Compiler / Console Message
                 </h3>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   Current submission
                 </span>
               </div>
@@ -700,21 +700,21 @@ export default function ProblemPage() {
           )}
 
           {submissionError && !verdict && (
-            <p className="text-xs text-red-600 text-center">
+            <p className="text-xs text-red-300 text-center">
               {submissionError}
             </p>
           )}
           
           {/* Divider */}
-          <div className="border-t border-gray-200 pt-3">
+          <div className="border-t border-slate-700 pt-3">
             {/* AI Hint Button */}
             <button
               onClick={handleGetHint}
               disabled={isLoadingHint || hintsRemaining === 0 || !problem}
               className={`w-full py-2 px-4 rounded font-medium transition-colors flex items-center justify-center gap-2 ${
                 isLoadingHint || hintsRemaining === 0 || !problem
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-purple-600 text-white hover:bg-purple-700'
+                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:from-purple-400 hover:to-cyan-400 shadow-[0_8px_24px_rgba(168,85,247,0.35)]'
               }`}
             >
               {isLoadingHint ? (
@@ -737,14 +737,14 @@ export default function ProblemPage() {
             
             {/* Hint error message */}
             {hintError && (
-              <p className="text-xs text-red-600 text-center mt-2">
+              <p className="text-xs text-red-300 text-center mt-2">
                 {hintError}
               </p>
             )}
             
             {/* Hint info text */}
             {!hintError && hintsRemaining > 0 && (
-              <p className="text-xs text-gray-500 text-center mt-2">
+              <p className="text-xs text-slate-400 text-center mt-2">
                 Hints appear in the "Hints" tab on the left
               </p>
             )}

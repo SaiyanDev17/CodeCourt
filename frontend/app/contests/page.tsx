@@ -94,10 +94,10 @@ export default function ContestsPage() {
   // Loading state: Show spinner while fetching
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-6">Contests</h1>
+      <div className="section-container">
+        <h1 className="page-title">Contests</h1>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
         </div>
       </div>
     )
@@ -106,13 +106,13 @@ export default function ContestsPage() {
   // Error state: Show error message with retry button
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-6">Contests</h1>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="section-container">
+        <h1 className="page-title">Contests</h1>
+        <div className="glass-panel border-red-400/40 rounded-2xl p-6 text-center">
+          <p className="text-red-300 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-400 transition-colors"
           >
             Retry
           </button>
@@ -128,19 +128,19 @@ export default function ContestsPage() {
   const ContestCard = ({ contest }: { contest: Contest }) => (
     <Link
       href={`/contests/${contest._id}`}
-      className="block bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+      className="glass-panel glass-panel-hover block rounded-2xl p-6"
     >
       <div className="flex items-start justify-between mb-3">
-        <h3 className="text-xl font-semibold text-gray-900 flex-1">
+        <h3 className="text-xl font-semibold text-slate-100 flex-1">
           {contest.title}
         </h3>
         <Badge variant={contest.status} size="md" />
       </div>
 
-      <div className="space-y-2 text-sm text-gray-600">
+      <div className="space-y-2 text-sm text-slate-300">
         <div className="flex items-center gap-2">
           <svg
-            className="w-4 h-4 text-gray-400"
+            className="w-4 h-4 text-slate-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -229,9 +229,9 @@ export default function ContestsPage() {
     emptyMessage: string
   }) => (
     <div className="mb-12">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">{title}</h2>
+      <h2 className="text-2xl font-bold mb-4 text-slate-100">{title}</h2>
       {contests.length === 0 ? (
-        <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
+        <p className="glass-panel text-slate-400 text-center py-8 rounded-2xl">
           {emptyMessage}
         </p>
       ) : (
@@ -246,10 +246,10 @@ export default function ContestsPage() {
 
   // Success state: Render the contests organized by status
   return (
-    <div className="container mx-auto p-8">
+    <div className="section-container">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Contests</h1>
-        <p className="text-gray-600">
+        <h1 className="page-title">Contests</h1>
+        <p className="page-subtitle">
           Compete with others and climb the leaderboard
         </p>
       </div>

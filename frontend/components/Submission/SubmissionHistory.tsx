@@ -100,7 +100,7 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
   if (loading) {
     return (
       <div className="flex justify-center py-8" role="status" aria-label="Loading submissions">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
       </div>
     )
   }
@@ -109,10 +109,10 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-red-300 mb-4">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 rounded-lg hover:from-cyan-300 hover:to-blue-400 transition-all"
         >
           Retry
         </button>
@@ -123,7 +123,7 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
   // Empty state
   if (submissions.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-slate-400">
         <p className="text-lg font-medium">No submissions yet</p>
         <p className="text-sm mt-2">Submit your code to see results here</p>
       </div>
@@ -133,12 +133,12 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
   // Submissions list
   return (
     <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <h3 className="text-lg font-semibold text-slate-100 mb-4">
         Your Submissions ({submissions.length})
       </h3>
       
       {detailError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {detailError}
         </div>
       )}
@@ -147,20 +147,20 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
         <button
           type="button"
           key={submission._id}
-          className="w-full text-left bg-gray-50 rounded-lg p-4 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer transition-colors border border-gray-200"
+          className="w-full text-left glass-panel rounded-xl p-4 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer transition-colors border border-slate-700/70"
           onClick={() => openSubmission(submission._id)}
           tabIndex={0}
         >
           {/* Header: Verdict and Timestamp */}
           <div className="flex items-center justify-between mb-2">
             <VerdictBadge verdict={submission.verdict} size="small" />
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-slate-400">
               {new Date(submission.createdAt).toLocaleString()}
             </span>
           </div>
           
           {/* Details: Language and Execution Metrics */}
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-slate-300">
             <span className="font-medium">{submission.language.toUpperCase()}</span>
             
             {submission.executionTime !== null && (
@@ -204,7 +204,7 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
             )}
 
             {detailLoadingId === submission._id && (
-              <span className="text-blue-600">Loading details...</span>
+              <span className="text-cyan-300">Loading details...</span>
             )}
           </div>
         </button>
@@ -217,20 +217,20 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
           aria-modal="true"
           aria-labelledby="submission-detail-title"
         >
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white shadow-xl">
-            <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-900/95 p-4">
               <div>
-                <h4 id="submission-detail-title" className="text-lg font-semibold text-gray-900">
+                <h4 id="submission-detail-title" className="text-lg font-semibold text-slate-100">
                   Submission Details
                 </h4>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-400">
                   {new Date(selectedSubmission.createdAt).toLocaleString()}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}
-                className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100"
               >
                 Close
               </button>
@@ -239,44 +239,44 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
             <div className="space-y-5 p-4">
               <div className="flex flex-wrap items-center gap-4">
                 <VerdictBadge verdict={selectedSubmission.verdict} size="large" />
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-slate-200">
                   {selectedSubmission.language.toUpperCase()}
                 </span>
                 {selectedSubmission.executionTime !== null && (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-slate-300">
                     Time: {selectedSubmission.executionTime}ms
                   </span>
                 )}
                 {selectedSubmission.memoryUsed !== null && (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-slate-300">
                     Memory: {selectedSubmission.memoryUsed}MB
                   </span>
                 )}
               </div>
 
               <section>
-                <h5 className="mb-2 text-sm font-semibold text-gray-900">Source Code</h5>
-                <pre className="max-h-96 overflow-auto rounded-lg border border-gray-200 bg-gray-950 p-4 text-sm text-gray-100">
+                <h5 className="mb-2 text-sm font-semibold text-slate-100">Source Code</h5>
+                <pre className="max-h-96 overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-100">
                   <code>{selectedSubmission.code}</code>
                 </pre>
               </section>
 
               <section>
-                <h5 className="mb-2 text-sm font-semibold text-gray-900">Console / Compiler Message</h5>
+                <h5 className="mb-2 text-sm font-semibold text-slate-100">Console / Compiler Message</h5>
                 {selectedSubmission.compilerError ? (
                   <pre className="overflow-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     {selectedSubmission.compilerError}
                   </pre>
                 ) : (
-                  <p className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                  <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
                     No compiler or runtime message was recorded for this submission.
                   </p>
                 )}
               </section>
 
               <section>
-                <h5 className="mb-2 text-sm font-semibold text-gray-900">Test Cases</h5>
-                <p className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                <h5 className="mb-2 text-sm font-semibold text-slate-100">Test Cases</h5>
+                <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
                   Detailed passed/failed test case counts are not currently stored by the judge. The verdict above shows the final result.
                 </p>
               </section>

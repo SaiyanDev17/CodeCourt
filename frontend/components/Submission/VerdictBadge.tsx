@@ -64,13 +64,13 @@ function getVerdictText(verdict: SubmissionVerdict): string {
 function getVerdictColorClasses(verdict: SubmissionVerdict): string {
   return clsx(
     'font-semibold',
-    verdict === 'AC' && 'text-green-700 bg-green-100 border-green-300',
-    verdict === 'WA' && 'text-red-700 bg-red-100 border-red-300',
-    verdict === 'TLE' && 'text-yellow-700 bg-yellow-100 border-yellow-300',
-    verdict === 'MLE' && 'text-yellow-700 bg-yellow-100 border-yellow-300',
-    verdict === 'RE' && 'text-orange-700 bg-orange-100 border-orange-300',
-    verdict === 'CE' && 'text-red-700 bg-red-100 border-red-300',
-    verdict === 'PENDING' && 'text-gray-700 bg-gray-100 border-gray-300'
+    verdict === 'AC' && 'text-emerald-300 bg-emerald-500/15 border-emerald-400/35',
+    verdict === 'WA' && 'text-red-300 bg-red-500/15 border-red-400/35',
+    verdict === 'TLE' && 'text-amber-300 bg-amber-500/15 border-amber-400/35',
+    verdict === 'MLE' && 'text-amber-300 bg-amber-500/15 border-amber-400/35',
+    verdict === 'RE' && 'text-orange-300 bg-orange-500/15 border-orange-400/35',
+    verdict === 'CE' && 'text-red-300 bg-red-500/15 border-red-400/35',
+    verdict === 'PENDING' && 'text-slate-300 bg-slate-500/20 border-slate-400/35'
   )
 }
 
@@ -290,6 +290,7 @@ export function VerdictBadge({ verdict, size = 'medium' }: VerdictBadgeProps) {
     <div
       className={clsx(
         'inline-flex items-center rounded-md border',
+        'backdrop-blur-sm',
         getVerdictColorClasses(verdict),
         getSizeClasses(size)
       )}

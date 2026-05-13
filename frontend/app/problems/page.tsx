@@ -40,10 +40,10 @@ export default function ProblemsPage() {
   // Loading state: Show spinner while fetching
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-6">Problems</h1>
+      <div className="section-container">
+        <h1 className="page-title">Problems</h1>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
         </div>
       </div>
     )
@@ -52,13 +52,13 @@ export default function ProblemsPage() {
   // Error state: Show error message with retry button
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-6">Problems</h1>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="section-container">
+        <h1 className="page-title">Problems</h1>
+        <div className="glass-panel border-red-400/40 rounded-2xl p-6 text-center">
+          <p className="text-red-300 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-400 transition-colors"
           >
             Retry
           </button>
@@ -69,11 +69,11 @@ export default function ProblemsPage() {
 
   // Success state: Render the problem grid
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-6">Problems</h1>
+    <div className="section-container">
+      <h1 className="page-title">Problems</h1>
       
       {problems.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">
+        <p className="glass-panel rounded-2xl text-slate-400 text-center py-12">
           No problems available yet. Check back soon!
         </p>
       ) : (

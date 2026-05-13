@@ -42,10 +42,10 @@ export default function LeaderboardTable({
   // Empty state: no submissions yet
   if (leaderboard.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="p-12 text-center text-gray-500">
+      <div className="glass-panel rounded-2xl overflow-hidden">
+        <div className="p-12 text-center text-slate-400">
           <svg
-            className="w-16 h-16 mx-auto mb-4 text-gray-300"
+            className="w-16 h-16 mx-auto mb-4 text-slate-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -68,32 +68,32 @@ export default function LeaderboardTable({
 
   // Success state: display leaderboard
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className="glass-panel rounded-2xl overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-slate-700/70">
           {/* Table Header */}
-          <thead className="bg-gray-50">
+          <thead className="bg-slate-900/70">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Rank
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Username
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Score
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Problems Solved
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Penalty
               </th>
             </tr>
           </thead>
 
           {/* Table Body */}
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-700/60">
             {leaderboard.map((entry) => {
               // Calculate solved count and total penalty
               const solvedCount = entry.problemScores.filter((p) => p.solved).length
@@ -105,7 +105,7 @@ export default function LeaderboardTable({
               return (
                 <tr
                   key={entry.userId}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-slate-800/45 transition-colors"
                 >
                   {/* Rank Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -119,7 +119,7 @@ export default function LeaderboardTable({
                         </span>
                       ) : (
                         // Numeric rank for others
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-slate-100">
                           #{entry.rank}
                         </span>
                       )}
@@ -130,7 +130,7 @@ export default function LeaderboardTable({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link
                       href={`/profile/${entry.username}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
                     >
                       {entry.username}
                     </Link>
@@ -138,7 +138,7 @@ export default function LeaderboardTable({
 
                   {/* Score Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-slate-100">
                       {entry.totalScore}
                     </span>
                   </td>
@@ -147,7 +147,7 @@ export default function LeaderboardTable({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {/* Solved count */}
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-slate-100">
                         {solvedCount} / {problemCount}
                       </span>
 
@@ -158,10 +158,10 @@ export default function LeaderboardTable({
                             key={problem.problemId}
                             className={`w-6 h-6 rounded flex items-center justify-center text-xs font-medium ${
                               problem.solved
-                                ? 'bg-green-100 text-green-700'
+                                ? 'bg-emerald-500/20 text-emerald-300'
                                 : problem.attempts > 0
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-gray-100 text-gray-400'
+                                ? 'bg-red-500/20 text-red-300'
+                                : 'bg-slate-600/25 text-slate-400'
                             }`}
                             title={
                               problem.solved
@@ -181,7 +181,7 @@ export default function LeaderboardTable({
 
                   {/* Penalty Column */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-slate-400">
                       {totalPenalty}
                     </span>
                   </td>

@@ -111,7 +111,7 @@ function LoadingSpinner() {
   return (
     <div className="flex justify-center items-center py-12">
       <div
-        className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+        className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"
         role="status"
         aria-label="Loading submissions"
       ></div>
@@ -143,15 +143,15 @@ function SubmissionCard({ submission }: { submission: SubmissionWithProblem }) {
   return (
     <Link
       href={`/problems/${submission.problemSlug}`}
-      className="block bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow cursor-pointer"
+      className="glass-panel glass-panel-hover block rounded-2xl p-4 lg:p-6 cursor-pointer"
     >
       {/* Header: Problem Title and Timestamp */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 gap-2">
         <div className="flex-1">
-          <h3 className="text-base lg:text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+          <h3 className="text-base lg:text-lg font-semibold text-slate-100 hover:text-cyan-300 transition-colors">
             {submission.problemTitle}
           </h3>
-          <p className="text-xs lg:text-sm text-gray-500 mt-1">
+          <p className="text-xs lg:text-sm text-slate-400 mt-1">
             {formatTimestamp(submission.createdAt)}
           </p>
         </div>
@@ -161,7 +161,7 @@ function SubmissionCard({ submission }: { submission: SubmissionWithProblem }) {
       </div>
 
       {/* Metrics: Language, Execution Time, Memory Usage */}
-      <div className="flex flex-wrap items-center gap-3 lg:gap-6 text-xs lg:text-sm text-gray-600">
+      <div className="flex flex-wrap items-center gap-3 lg:gap-6 text-xs lg:text-sm text-slate-300">
         {/* Language */}
         <span className="font-medium">{submission.language.toUpperCase()}</span>
 
@@ -253,22 +253,22 @@ export default function AllSubmissionsPage() {
     : displayedSubmissions.filter(sub => sub.verdict === filter)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="container mx-auto px-3 lg:px-4 py-4 lg:py-8 max-w-5xl">
         {/* Page Title and Filter */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 lg:mb-6 gap-3 lg:gap-0">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">All Submissions</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-100">All Submissions</h1>
           
           {/* Verdict Filter Dropdown */}
           <div className="flex items-center gap-2 lg:gap-3">
-            <label htmlFor="verdict-filter" className="text-xs lg:text-sm font-medium text-gray-700">
+            <label htmlFor="verdict-filter" className="text-xs lg:text-sm font-medium text-slate-300">
               Filter:
             </label>
             <select
               id="verdict-filter"
               value={filter}
               onChange={(e) => setFilter(e.target.value as 'all' | SubmissionVerdict)}
-              className="px-3 lg:px-4 py-1.5 lg:py-2 text-sm lg:text-base border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 lg:px-4 py-1.5 lg:py-2 text-sm lg:text-base border border-slate-600 rounded-lg bg-slate-900/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
             >
               <option value="all">All Verdicts</option>
               <option value="AC">Accepted</option>
@@ -286,7 +286,7 @@ export default function AllSubmissionsPage() {
 
         {/* Error State */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="glass-panel border-red-400/40 rounded-xl p-4 text-red-300">
             {error}
           </div>
         )}
@@ -294,11 +294,11 @@ export default function AllSubmissionsPage() {
         {/* Empty State */}
         {!loading && !error && filteredSubmissions.length === 0 && (
           <div className="text-center py-8 lg:py-12">
-            <p className="text-gray-500 text-base lg:text-lg">
+            <p className="text-slate-400 text-base lg:text-lg">
               {displayedSubmissions.length === 0 ? 'No submissions found' : `No ${filter} submissions found`}
             </p>
             {displayedSubmissions.length === 0 && (
-              <p className="text-gray-400 text-xs lg:text-sm mt-2">
+              <p className="text-slate-500 text-xs lg:text-sm mt-2">
                 Submit solutions to problems to see your submission history here
               </p>
             )}
@@ -309,7 +309,7 @@ export default function AllSubmissionsPage() {
         {!loading && !error && filteredSubmissions.length > 0 && (
           <>
             {/* Submission Count */}
-            <div className="mb-3 lg:mb-4 text-xs lg:text-sm text-gray-600">
+            <div className="mb-3 lg:mb-4 text-xs lg:text-sm text-slate-400">
               Showing {filteredSubmissions.length} of {displayedSubmissions.length} submission{displayedSubmissions.length !== 1 ? 's' : ''}
             </div>
             
@@ -325,7 +325,7 @@ export default function AllSubmissionsPage() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-semibold rounded-lg hover:from-cyan-300 hover:to-blue-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {loadingMore ? 'Loading...' : 'Load More'}
                 </button>
