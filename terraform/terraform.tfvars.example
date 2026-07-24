@@ -1,19 +1,34 @@
-# Example Terraform variables
-# Copy this file to terraform.tfvars and fill in your values
+# =============================================================================
+# CodeCourt — Example Terraform Variables
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values:
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
 
-# AWS Configuration
-aws_region = "us-east-1"
-s3_bucket_name = "codecourt-test-cases"
+# AWS Region (match your existing S3 bucket)
+aws_region = "eu-north-1"
 
-# MongoDB Atlas Configuration
-atlas_project_id = "your-atlas-project-id"
-atlas_cluster_name = "codecourt-cluster"
-atlas_region = "US_EAST_1"
+# S3 bucket name for test case storage
+# TODO: Replace with your actual bucket name
+s3_bucket_name = "codecourt-test-cases-YOUR-ACCOUNT-ID-eu-north-1"
 
-# Oracle Cloud Configuration
-oci_compartment_id = "your-oci-compartment-id"
-oke_cluster_name = "codecourt-oke"
-oke_node_count = 2
+# EC2 instance type (t2.micro = free tier eligible)
+instance_type = "t2.micro"
+
+# SSH public key for EC2 access
+# Generate with: ssh-keygen -t rsa -b 4096 -f ~/.ssh/codecourt
+# Then paste the content of ~/.ssh/codecourt.pub here
+# TODO: Replace with your actual public key
+ssh_public_key = "ssh-rsa AAAA_REPLACE_WITH_YOUR_PUBLIC_KEY"
+
+# Restrict SSH access to your IP only (recommended)
+# Find your IP: curl ifconfig.me
+# TODO: Replace with your IP
+allowed_ssh_cidr = "0.0.0.0/0"
+
+# Domain name for HTTPS (leave empty for HTTP-only IP access)
+# If you have a domain, point its DNS A record to the Elastic IP after deployment
+domain_name = ""
 
 # Environment
 environment = "production"

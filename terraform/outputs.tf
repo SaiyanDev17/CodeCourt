@@ -1,27 +1,28 @@
-# Terraform outputs
+# =============================================================================
+# CodeCourt — Terraform Outputs
+# =============================================================================
+
+output "ec2_public_ip" {
+  description = "Public Elastic IP of the EC2 instance"
+  value       = module.compute.elastic_ip
+}
+
+output "ssh_command" {
+  description = "SSH command to connect to the instance"
+  value       = "ssh -i ~/.ssh/codecourt ec2-user@${module.compute.elastic_ip}"
+}
+
+output "app_url" {
+  description = "Application URL (HTTPS if domain configured, HTTP otherwise)"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${module.compute.elastic_ip}"
+}
 
 output "s3_bucket_name" {
-  description = "Name of the S3 bucket for test cases"
+  description = "S3 bucket name for test cases"
   value       = module.s3.bucket_name
 }
 
-output "s3_bucket_arn" {
-  description = "ARN of the S3 bucket"
-  value       = module.s3.bucket_arn
-}
-
-output "mongodb_connection_string" {
-  description = "MongoDB Atlas connection string"
-  value       = module.atlas.connection_string
-  sensitive   = true
-}
-
-output "oke_cluster_endpoint" {
-  description = "OKE cluster endpoint"
-  value       = module.oke.cluster_endpoint
-}
-
-output "oke_kubeconfig_path" {
-  description = "Path to OKE kubeconfig"
-  value       = module.oke.kubeconfig_path
+output "instance_id" {
+  description = "EC2 instance ID (for stopping/starting via AWS CLI)"
+  value       = module.compute.instance_id
 }

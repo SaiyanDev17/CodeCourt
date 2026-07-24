@@ -277,7 +277,11 @@ export default function RegisterPage() {
        */
       
       // Extract error message from response (if available)
-      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.'
+      let errorMessage = err.response?.data?.message || 'Registration failed. Please try again.'
+      
+      if (err.response?.status === 409) {
+        errorMessage = 'User already exists. Please log in instead.'
+      }
       
       // Set error state (will be displayed to user)
       setError(errorMessage)

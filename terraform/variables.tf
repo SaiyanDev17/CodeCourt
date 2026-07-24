@@ -1,62 +1,43 @@
-# Root Terraform variables
+# =============================================================================
+# CodeCourt — Root Terraform Variables
+# =============================================================================
 
-# AWS Variables
 variable "aws_region" {
-  description = "AWS region"
+  description = "AWS region for all resources"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-north-1" # Match existing S3 bucket region
 }
 
 variable "s3_bucket_name" {
-  description = "Name of the S3 bucket for test cases"
+  description = "S3 bucket name for test case ZIP storage"
   type        = string
 }
 
-# MongoDB Atlas Variables
-variable "atlas_project_id" {
-  description = "MongoDB Atlas project ID"
+variable "instance_type" {
+  description = "EC2 instance type (t2.micro = free tier eligible)"
+  type        = string
+  default     = "t2.micro"
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key content for EC2 access (cat ~/.ssh/id_rsa.pub)"
   type        = string
 }
 
-variable "atlas_cluster_name" {
-  description = "MongoDB Atlas cluster name"
+variable "allowed_ssh_cidr" {
+  description = "CIDR block allowed to SSH into EC2 (e.g., YOUR_IP/32)"
   type        = string
-  default     = "codecourt-cluster"
+  default     = "0.0.0.0/0" # Restrict to your IP in production
 }
 
-variable "atlas_region" {
-  description = "MongoDB Atlas region"
+variable "domain_name" {
+  description = "Domain name for HTTPS via Caddy (leave empty for HTTP-only IP access)"
   type        = string
-  default     = "US_EAST_1"
+  default     = ""
 }
 
-variable "atlas_instance_size" {
-  description = "MongoDB Atlas instance size"
-  type        = string
-  default     = "M10"
-}
-
-# Oracle Cloud Variables
-variable "oci_compartment_id" {
-  description = "Oracle Cloud compartment ID"
-  type        = string
-}
-
-variable "oke_cluster_name" {
-  description = "OKE cluster name"
-  type        = string
-  default     = "codecourt-oke"
-}
-
-variable "oke_node_count" {
-  description = "Number of OKE worker nodes"
-  type        = number
-  default     = 2
-}
-
-# General Variables
 variable "environment" {
-  description = "Environment name"
+  description = "Environment name (production, staging, dev)"
   type        = string
   default     = "production"
 }
