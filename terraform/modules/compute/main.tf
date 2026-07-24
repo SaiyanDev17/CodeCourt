@@ -160,7 +160,7 @@ resource "aws_instance" "codecourt" {
   iam_instance_profile   = aws_iam_instance_profile.codecourt.name
 
   root_block_device {
-    volume_size = 20     # 20 GB (free tier covers 30 GB)
+    volume_size = 30     # 30 GB (free tier covers 30 GB)
     volume_type = "gp3"  # gp3 is cheaper than gp2 and faster
     encrypted   = true   # Encryption at rest
   }

@@ -153,7 +153,7 @@ export default function LeaderboardPage({ params }: { params: { id: string } }) 
               {contest.title} - Leaderboard
             </h1>
           </div>
-          <Badge variant={contest.status} size="lg" />
+          <Badge variant={contest.status} />
         </div>
 
         {/* Contest Info */}

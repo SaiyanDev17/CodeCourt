@@ -3,15 +3,15 @@
 # CodeCourt EC2 Bootstrap Script (user-data)
 # =============================================================================
 # This script runs ONCE on first boot of the EC2 instance.
-# It installs Docker, clones the repo, builds judge images, and starts
-# the entire stack via Docker Compose.
+# It installs Docker & Buildx, clones the repo, builds judge images, sets up 
+# environment files, and starts the entire stack via Docker Compose.
 #
 # Logs: /var/log/cloud-init-output.log
 # =============================================================================
 set -euxo pipefail
 
 # ============================================================
-# 1. Install Docker + Docker Compose + Git
+# 1. Install Docker + Docker Compose + Docker Buildx + Git
 # ============================================================
 dnf update -y
 dnf install -y docker git
@@ -23,11 +23,18 @@ systemctl start docker
 # Add ec2-user to docker group (allows non-root docker commands)
 usermod -aG docker ec2-user
 
-# Install Docker Compose v2 plugin
+# Create global CLI plugins directory
 mkdir -p /usr/local/lib/docker/cli-plugins
+
+# Install Docker Compose v2 plugin
 curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Install Docker Buildx plugin (v0.17.1)
+curl -SL "https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
 # ============================================================
 # 2. Clone CodeCourt Repository
@@ -51,14 +58,6 @@ docker build -t codecourt-judge-python \
 # ============================================================
 # 4. Create Caddy Reverse Proxy Configuration
 # ============================================================
-# Caddy handles:
-#   - Reverse proxying to all 3 services
-#   - Auto-HTTPS via Let's Encrypt (if domain provided)
-#   - HTTP → HTTPS redirect
-#   - Gzip compression
-#   - WebSocket proxying for Socket.io
-# ============================================================
-
 DOMAIN="${domain_name}"
 
 if [ -z "$DOMAIN" ]; then
@@ -130,16 +129,6 @@ fi
 # ============================================================
 # 5. Create Production Docker Compose File
 # ============================================================
-# This compose file is specifically for the EC2 deployment.
-# It differs from the dev compose in:
-#   - Caddy reverse proxy in front of everything
-#   - No port exposure except 80/443 (Caddy handles routing)
-#   - Redis tuned for low memory (128MB)
-#   - BullMQ concurrency reduced to 1 (1GB RAM instance)
-#   - restart: unless-stopped for all services
-#   - No MongoDB container (uses Atlas)
-# ============================================================
-
 cat > docker-compose.deploy.yml <<'COMPOSE'
 services:
   # ── Caddy Reverse Proxy (Load Balancer + Auto-HTTPS) ──
@@ -263,7 +252,17 @@ networks:
 COMPOSE
 
 # ============================================================
-# 6. Start the Stack
+# 6. Initialize Environment Files
+# ============================================================
+cp backend/.env.example backend/.env 2>/dev/null || true
+cp frontend/.env.example frontend/.env 2>/dev/null || true
+cp ai-service/.env.example ai-service/.env 2>/dev/null || true
+
+# Fix ownership so ec2-user owns generated files
+chown -R ec2-user:ec2-user /home/ec2-user/app
+
+# ============================================================
+# 7. Start the Stack
 # ============================================================
 docker compose -f docker-compose.deploy.yml up -d --build
 

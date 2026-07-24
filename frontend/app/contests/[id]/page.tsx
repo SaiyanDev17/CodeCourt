@@ -21,7 +21,7 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
   const [registering, setRegistering] = useState(false)
 
   // Check if user is registered for this contest
-  const isRegistered = contest?.participants.includes(user?._id || '')
+  const isRegistered = contest?.participants.includes(user?.id || '')
 
   // Fetch contest details and associated problems
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
       if (contest) {
         setContest({
           ...contest,
-          participants: [...contest.participants, user._id],
+          participants: [...contest.participants, user.id],
         })
       }
     } catch (err: any) {
@@ -142,7 +142,7 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {contest.title}
             </h1>
-            <Badge variant={contest.status} size="lg" />
+            <Badge variant={contest.status} />
           </div>
 
           {/* Register Button */}
