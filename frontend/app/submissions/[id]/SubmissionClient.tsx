@@ -159,8 +159,14 @@ export default function SubmissionClient() {
                 </div>
               )}
             </div>
+          ) : submission.verdict === 'AC' ? (
+            <p className="text-green-700 font-medium bg-green-50 p-3 rounded border border-green-200">
+              Passed all test cases (Accepted).
+            </p>
           ) : (
-            <p className="text-gray-600">Test case counts were not stored for this older submission.</p>
+            <p className="text-gray-600">
+              Verdict: <span className="font-semibold">{submission.verdict}</span>. Detailed test breakdown is stored for new submissions.
+            </p>
           )}
         </div>
         

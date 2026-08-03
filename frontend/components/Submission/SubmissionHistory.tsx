@@ -314,9 +314,13 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
                       </div>
                     )}
                   </div>
+                ) : selectedSubmission.verdict === 'AC' ? (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+                    Passed all test cases (Accepted).
+                  </div>
                 ) : (
                   <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
-                    Test case counts were not stored for this older submission.
+                    Verdict: <span className="font-semibold text-slate-100">{selectedSubmission.verdict}</span>. Detailed test breakdown is stored for new submissions.
                   </p>
                 )}
               </section>

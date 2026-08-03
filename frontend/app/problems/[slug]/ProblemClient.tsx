@@ -543,12 +543,20 @@ export default function ProblemClient() {
             </div>
           )}
 
-          {verdict && testCaseSummary && testCaseSummary.total > 0 && (
+          {verdict && (
             <div className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">
               <div className="font-semibold text-slate-100">Test Cases</div>
               <div className="mt-1">
-                Passed {testCaseSummary.passed}/{testCaseSummary.total}
-                {testCaseSummary.firstFailedCase ? `, first failed: #${testCaseSummary.firstFailedCase}` : ''}
+                {testCaseSummary && testCaseSummary.total > 0 ? (
+                  <>
+                    Passed {testCaseSummary.passed}/{testCaseSummary.total}
+                    {testCaseSummary.firstFailedCase ? `, first failed: #${testCaseSummary.firstFailedCase}` : ''}
+                  </>
+                ) : verdict === 'AC' ? (
+                  <span className="text-emerald-400 font-medium">Passed all test cases (Accepted)</span>
+                ) : (
+                  <span>Overall Verdict: <strong className="text-slate-100">{verdict}</strong>. Test case breakdown recorded for new submissions.</span>
+                )}
               </div>
             </div>
           )}
