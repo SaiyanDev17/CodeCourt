@@ -89,10 +89,7 @@ export default function MonacoEditor({
   }
 
   return (
-    <div 
-      className="h-full flex flex-col rounded-2xl border border-slate-700/70 bg-slate-950/70 shadow-[0_12px_30px_rgba(2,6,23,0.45)] overflow-hidden backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/35"
-      onKeyDownCapture={(e) => e.stopPropagation()}
-    >
+    <div className="h-full flex flex-col rounded-2xl border border-slate-700/70 bg-slate-950/70 shadow-[0_12px_30px_rgba(2,6,23,0.45)] overflow-hidden backdrop-blur-sm transition-all duration-200 hover:border-cyan-400/35">
       {/* Language Selector */}
       <div className="flex-shrink-0 bg-slate-900/85 px-4 py-2.5 border-b border-slate-700/70 flex items-center gap-2">
         <label htmlFor="language-select" className="text-sm font-medium text-slate-300">
@@ -129,7 +126,10 @@ export default function MonacoEditor({
               domNode.addEventListener(
                 'keydown',
                 (e) => {
-                  e.stopPropagation()
+                  // Specifically prevent Vercel Toolbar comment hotkey ('c') from bubbling
+                  if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    e.stopPropagation()
+                  }
                 },
                 true
               )
