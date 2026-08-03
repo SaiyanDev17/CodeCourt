@@ -45,6 +45,9 @@ export default function ProblemClient() {
     executionTime,
     memoryUsed,
     compilerError,
+    judgeMessage,
+    testCaseSummary,
+    testCaseResults,
     isJudging,
     error: submissionError,
     reset: resetSubmission,
@@ -514,10 +517,13 @@ export default function ProblemClient() {
           {verdict && (
             <SubmissionResult
               verdict={verdict}
-              testCases={[]}
+              testCases={(testCaseResults || []).map((result) => ({
+                testNumber: result.testNumber,
+                passed: result.status === 'PASSED',
+              }))}
               executionTime={executionTime}
               memoryUsed={memoryUsed}
-              compilerError={null}
+              compilerError={compilerError || judgeMessage || null}
             />
           )}
 
@@ -532,8 +538,18 @@ export default function ProblemClient() {
                 </span>
               </div>
               <pre className="max-h-48 overflow-auto whitespace-pre-wrap p-4 font-mono text-sm leading-6">
-                {currentConsoleMessage || 'No compiler or runtime message was returned for this submission.'}
+                {currentConsoleMessage || judgeMessage || 'No compiler or runtime message was returned for this submission.'}
               </pre>
+            </div>
+          )}
+
+          {verdict && testCaseSummary && testCaseSummary.total > 0 && (
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">
+              <div className="font-semibold text-slate-100">Test Cases</div>
+              <div className="mt-1">
+                Passed {testCaseSummary.passed}/{testCaseSummary.total}
+                {testCaseSummary.firstFailedCase ? `, first failed: #${testCaseSummary.firstFailedCase}` : ''}
+              </div>
             </div>
           )}
 

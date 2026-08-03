@@ -43,7 +43,10 @@ const worker = new Worker('submissions', async (job) => {
       verdict: verdict.verdict,
       executionTime: verdict.executionTime,
       memoryUsed: verdict.memoryUsed,
-      compilerError: verdict.compilerError
+      compilerError: verdict.compilerError,
+      judgeMessage: verdict.judgeMessage,
+      testCaseSummary: verdict.testCaseSummary,
+      testCaseResults: verdict.testCaseResults
     });
     
     try {
@@ -54,7 +57,10 @@ const worker = new Worker('submissions', async (job) => {
           verdict: verdict.verdict,
           executionTime: verdict.executionTime,
           memoryUsed: verdict.memoryUsed,
-          compilerError: verdict.compilerError
+          compilerError: verdict.compilerError,
+          judgeMessage: verdict.judgeMessage,
+          testCaseSummary: verdict.testCaseSummary,
+          testCaseResults: verdict.testCaseResults
         }
       }));
     } catch (error) {
@@ -85,7 +91,10 @@ const worker = new Worker('submissions', async (job) => {
     console.error('Worker error:', error);
     await Submission.findByIdAndUpdate(submissionId, {
       verdict: 'RE',
-      compilerError: error.message
+      compilerError: error.message,
+      judgeMessage: error.message,
+      testCaseSummary: { total: 0, passed: 0, failed: 0, firstFailedCase: null },
+      testCaseResults: []
     });
     throw error;
   }
@@ -251,7 +260,10 @@ done
           verdict: 'RE',
           executionTime: 0,
           memoryUsed: 0,
-          compilerError: 'Internal Judge Error: ' + err.message
+          compilerError: 'Internal Judge Error: ' + err.message,
+          judgeMessage: 'Internal Judge Error: ' + err.message,
+          testCaseSummary: { total: testCases.length, passed: 0, failed: testCases.length, firstFailedCase: 1 },
+          testCaseResults: createRemainingTestResults(testCases.length, 0, 'RE')
         });
       }
     });
@@ -262,7 +274,10 @@ done
         verdict: 'RE',
         executionTime: 0,
         memoryUsed: 0,
-        compilerError: 'Internal Judge Error: Failed to start docker container'
+        compilerError: 'Internal Judge Error: Failed to start docker container',
+        judgeMessage: 'Internal Judge Error: Failed to start docker container',
+        testCaseSummary: { total: testCases.length, passed: 0, failed: testCases.length, firstFailedCase: 1 },
+        testCaseResults: createRemainingTestResults(testCases.length, 0, 'RE')
       });
     });
 
@@ -275,15 +290,20 @@ done
 
 function parseJudgeLogs(logs, problem, testCases, timeLimit, memoryLimit, stderrLog = '') {
   const lines = logs.split('\n');
+  const results = [];
   
   if (lines.includes('---COMPILE_ERROR---')) {
     const idx = lines.indexOf('---COMPILE_ERROR---');
     const base64Err = lines.slice(idx + 1).join('').trim();
+    const message = Buffer.from(base64Err, 'base64').toString('utf8');
     return {
       verdict: 'CE',
       executionTime: 0,
       memoryUsed: 0,
-      compilerError: Buffer.from(base64Err, 'base64').toString('utf8')
+      compilerError: message,
+      judgeMessage: message,
+      testCaseSummary: { total: testCases.length, passed: 0, failed: testCases.length, firstFailedCase: null },
+      testCaseResults: createRemainingTestResults(testCases.length, 0, 'FAILED')
     };
   }
   
@@ -295,11 +315,15 @@ function parseJudgeLogs(logs, problem, testCases, timeLimit, memoryLimit, stderr
     const idx = lines.indexOf(marker);
     if (idx === -1) {
       console.error(`Marker ${marker} not found in logs:`, logs, 'stderr:', stderrLog);
+      const message = stderrLog ? `Judge Error: ${stderrLog}` : 'Test case output not found in logs';
       return { 
         verdict: 'RE', 
         executionTime: 0, 
         memoryUsed: 0, 
-        compilerError: stderrLog ? `Judge Error: ${stderrLog}` : 'Test case output not found in logs' 
+        compilerError: message,
+        judgeMessage: message,
+        testCaseSummary: buildTestCaseSummary(testCases.length, results, tcIndex + 1),
+        testCaseResults: [...results, ...createRemainingTestResults(testCases.length, results.length, 'RE')]
       };
     }
     
@@ -324,19 +348,92 @@ function parseJudgeLogs(logs, problem, testCases, timeLimit, memoryLimit, stderr
     const stderrOutput = Buffer.from(stderrBase64, 'base64').toString('utf8').trim();
     
     if (exitCode === 124) {
-      return { verdict: 'TLE', executionTime: timeLimit, memoryUsed: memoryUsedEst, compilerError: null };
+      results.push(createTestResult(tcIndex, 'TLE', timeLimit, memoryUsedEst));
+      return {
+        verdict: 'TLE',
+        executionTime: timeLimit,
+        memoryUsed: memoryUsedEst,
+        compilerError: null,
+        judgeMessage: `Time limit exceeded on test case ${tcIndex + 1}`,
+        testCaseSummary: buildTestCaseSummary(testCases.length, results, tcIndex + 1),
+        testCaseResults: [...results, ...createRemainingTestResults(testCases.length, results.length, 'FAILED')]
+      };
     } else if (exitCode === 137) {
-      return { verdict: 'MLE', executionTime: timeMs, memoryUsed: memoryLimit, compilerError: null };
+      results.push(createTestResult(tcIndex, 'MLE', timeMs, memoryLimit));
+      return {
+        verdict: 'MLE',
+        executionTime: timeMs,
+        memoryUsed: memoryLimit,
+        compilerError: null,
+        judgeMessage: `Memory limit exceeded on test case ${tcIndex + 1}`,
+        testCaseSummary: buildTestCaseSummary(testCases.length, results, tcIndex + 1),
+        testCaseResults: [...results, ...createRemainingTestResults(testCases.length, results.length, 'FAILED')]
+      };
     } else if (exitCode !== 0) {
-      return { verdict: 'RE', executionTime: timeMs, memoryUsed: memoryUsedEst, compilerError: stderrOutput };
+      results.push(createTestResult(tcIndex, 'RE', timeMs, memoryUsedEst));
+      const message = stderrOutput || `Runtime error on test case ${tcIndex + 1}`;
+      return {
+        verdict: 'RE',
+        executionTime: timeMs,
+        memoryUsed: memoryUsedEst,
+        compilerError: message,
+        judgeMessage: message,
+        testCaseSummary: buildTestCaseSummary(testCases.length, results, tcIndex + 1),
+        testCaseResults: [...results, ...createRemainingTestResults(testCases.length, results.length, 'FAILED')]
+      };
     } else {
       if (!isOutputCorrect(problem, testCases[tcIndex], actualOutput)) {
-        return { verdict: 'WA', executionTime: timeMs, memoryUsed: memoryUsedEst, compilerError: null };
+        results.push(createTestResult(tcIndex, 'FAILED', timeMs, memoryUsedEst));
+        return {
+          verdict: 'WA',
+          executionTime: timeMs,
+          memoryUsed: memoryUsedEst,
+          compilerError: null,
+          judgeMessage: `Wrong answer on test case ${tcIndex + 1}`,
+          testCaseSummary: buildTestCaseSummary(testCases.length, results, tcIndex + 1),
+          testCaseResults: [...results, ...createRemainingTestResults(testCases.length, results.length, 'FAILED')]
+        };
       }
+      results.push(createTestResult(tcIndex, 'PASSED', timeMs, memoryUsedEst));
     }
   }
   
-  return { verdict: 'AC', executionTime: maxExecutionTime, memoryUsed: peakMemoryUsed, compilerError: null };
+  return {
+    verdict: 'AC',
+    executionTime: maxExecutionTime,
+    memoryUsed: peakMemoryUsed,
+    compilerError: null,
+    judgeMessage: `Accepted. Passed ${testCases.length}/${testCases.length} test cases.`,
+    testCaseSummary: buildTestCaseSummary(testCases.length, results, null),
+    testCaseResults: results
+  };
+}
+
+function createTestResult(tcIndex, status, executionTime, memoryUsed) {
+  return {
+    testNumber: tcIndex + 1,
+    status,
+    executionTime,
+    memoryUsed
+  };
+}
+
+function createRemainingTestResults(total, completedCount, status) {
+  const remaining = [];
+  for (let i = completedCount; i < total; i++) {
+    remaining.push(createTestResult(i, status, null, null));
+  }
+  return remaining;
+}
+
+function buildTestCaseSummary(total, results, firstFailedCase) {
+  const passed = results.filter((result) => result.status === 'PASSED').length;
+  return {
+    total,
+    passed,
+    failed: Math.max(0, total - passed),
+    firstFailedCase
+  };
 }
 
 function isOutputCorrect(problem, testCase, actualOutput) {

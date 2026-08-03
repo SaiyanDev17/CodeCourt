@@ -245,7 +245,7 @@ export function SubmissionResult({
       {compilerError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="text-red-700 font-semibold mb-2">
-            Compilation Error:
+            {verdict === 'CE' ? 'Compilation Error:' : 'Judge Message:'}
           </div>
           <pre className="text-sm text-red-600 whitespace-pre-wrap font-mono overflow-x-auto bg-white p-3 rounded border border-red-100">
             {compilerError}

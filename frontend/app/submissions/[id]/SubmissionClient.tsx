@@ -103,23 +103,66 @@ export default function SubmissionClient() {
                 <p className="text-lg font-semibold text-gray-900">{submission.memoryUsed.toFixed(2)}MB</p>
               </div>
             )}
+
+            {submission.testCaseSummary && submission.testCaseSummary.total > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-600">Test Cases</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {submission.testCaseSummary.passed}/{submission.testCaseSummary.total} passed
+                </p>
+              </div>
+            )}
           </div>
         </div>
         
         {/* Compiler Error */}
-        {submission.compilerError && (
+        {(submission.compilerError || submission.judgeMessage) && (
           <div className="bg-red-50 rounded-lg border border-red-200 p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4 text-red-700 flex items-center gap-2">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Compiler Error
+              {submission.compilerError && submission.verdict === 'CE' ? 'Compiler Error' : 'Judge Message'}
             </h2>
             <pre className="text-sm text-red-600 whitespace-pre-wrap font-mono bg-white p-4 rounded border border-red-100 overflow-x-auto">
-              {submission.compilerError}
+              {submission.compilerError || submission.judgeMessage}
             </pre>
           </div>
         )}
+
+        {/* Test Cases */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900">Test Cases</h2>
+          {submission.testCaseSummary && submission.testCaseSummary.total > 0 ? (
+            <div>
+              <p className="text-gray-800 font-medium">
+                Passed {submission.testCaseSummary.passed}/{submission.testCaseSummary.total}
+                {submission.testCaseSummary.firstFailedCase
+                  ? `, first failed: #${submission.testCaseSummary.firstFailedCase}`
+                  : ''}
+              </p>
+              {submission.testCaseResults && submission.testCaseResults.length > 0 && (
+                <div className="mt-4 grid grid-cols-8 gap-2 sm:grid-cols-12">
+                  {submission.testCaseResults.map((testCase) => (
+                    <div
+                      key={testCase.testNumber}
+                      title={`Test ${testCase.testNumber}: ${testCase.status}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded border text-xs font-semibold ${
+                        testCase.status === 'PASSED'
+                          ? 'border-green-500 bg-green-100 text-green-700'
+                          : 'border-red-500 bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {testCase.testNumber}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-gray-600">Test case counts were not stored for this older submission.</p>
+          )}
+        </div>
         
         {/* Submitted Code */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">

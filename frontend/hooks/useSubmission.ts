@@ -106,6 +106,9 @@ interface UseSubmissionReturn {
    * - Contains error message when verdict is 'CE'
    */
   compilerError: string | null
+  judgeMessage: string | null
+  testCaseSummary: Submission['testCaseSummary'] | null
+  testCaseResults: Submission['testCaseResults']
   
   /**
    * Judging state flag
@@ -169,6 +172,9 @@ export function useSubmission(): UseSubmissionReturn {
   const [executionTime, setExecutionTime] = useState<number | null>(null)
   const [memoryUsed, setMemoryUsed] = useState<number | null>(null)
   const [compilerError, setCompilerError] = useState<string | null>(null)
+  const [judgeMessage, setJudgeMessage] = useState<string | null>(null)
+  const [testCaseSummary, setTestCaseSummary] = useState<Submission['testCaseSummary'] | null>(null)
+  const [testCaseResults, setTestCaseResults] = useState<Submission['testCaseResults']>([])
   
   // UI state
   const [isJudging, setIsJudging] = useState(false)
@@ -270,20 +276,38 @@ export function useSubmission(): UseSubmissionReturn {
       
       console.log('[useSubmission] Verdict matches current submission, updating state')
       
-      // Update verdict state
+      // Update verdict state immediately
       setVerdict(data.verdict)
       setExecutionTime(data.executionTime)
       setMemoryUsed(data.memoryUsed)
       setCompilerError(data.compilerError ?? null)
+      setJudgeMessage(data.judgeMessage ?? null)
+      setTestCaseSummary(data.testCaseSummary ?? null)
+      setTestCaseResults(data.testCaseResults ?? [])
       
-      // Stop judging spinner
+      // Stop judging spinner immediately
       setIsJudging(false)
       
       // Clear any previous errors
       setError(null)
 
-      // The running backend/worker may emit only the verdict metrics. Fetch the
-      // saved submission once judging finishes so compiler/runtime output is not lost.
+      // Update currentSubmission state object immediately
+      setCurrentSubmission((prev) =>
+        prev
+          ? {
+              ...prev,
+              verdict: data.verdict,
+              executionTime: data.executionTime,
+              memoryUsed: data.memoryUsed,
+              compilerError: data.compilerError ?? null,
+              judgeMessage: data.judgeMessage ?? null,
+              testCaseSummary: data.testCaseSummary ?? null,
+              testCaseResults: data.testCaseResults ?? [],
+            }
+          : null
+      )
+
+      // Also fetch the full saved submission from DB to ensure persistence parity
       try {
         const response = await api.get<{ submission: Submission }>(`/submissions/${data.submissionId}`)
         const submission = response.data.submission
@@ -292,6 +316,9 @@ export function useSubmission(): UseSubmissionReturn {
         setExecutionTime(submission.executionTime)
         setMemoryUsed(submission.memoryUsed)
         setCompilerError(submission.compilerError ?? null)
+        setJudgeMessage(submission.judgeMessage ?? data.judgeMessage ?? null)
+        setTestCaseSummary(submission.testCaseSummary ?? data.testCaseSummary ?? null)
+        setTestCaseResults(submission.testCaseResults ?? data.testCaseResults ?? [])
         setCurrentSubmission(submission)
       } catch (err) {
         console.error('[useSubmission] Failed to refresh completed submission:', err)
@@ -302,23 +329,6 @@ export function useSubmission(): UseSubmissionReturn {
     console.log('[useSubmission] Registering verdict event listener')
     socket.on('verdict', handleVerdict)
     
-    // ========================================================================
-    // CLEANUP FUNCTION
-    // ========================================================================
-    
-    /**
-     * This cleanup function runs when:
-     * 1. Component unmounts
-     * 2. Dependencies change (user, accessToken)
-     * 
-     * It removes the event listener to prevent memory leaks
-     * 
-     * Why is cleanup important?
-     * - Without cleanup, old event listeners accumulate
-     * - Each re-render would add a new listener
-     * - Multiple listeners would fire for the same event
-     * - This causes bugs and memory leaks
-     */
     return () => {
       console.log('[useSubmission] Cleaning up verdict event listener')
       socket.off('verdict', handleVerdict)
@@ -349,16 +359,12 @@ export function useSubmission(): UseSubmissionReturn {
    * - Better UX than showing "connection lost" with no fallback
    */
   useEffect(() => {
-    // Only poll if:
-    // 1. We have a current submission being judged
-    // 2. Socket.io is NOT connected
-    // 3. We're not already polling
-    if (!currentSubmission || isSocketConnected() || isPolling) {
+    // Poll while submission is pending & judging to guarantee state update even if socket drops
+    if (!currentSubmission || currentSubmission.verdict !== 'PENDING' || !isJudging || isPolling) {
       return
     }
     
-    // If we have a submission but Socket.io is disconnected, start polling
-    console.log('[useSubmission] Socket.io disconnected, starting polling fallback')
+    console.log('[useSubmission] Starting status polling backup')
     
     setIsPolling(true)
     setPollingAttempts(0)
@@ -390,6 +396,10 @@ export function useSubmission(): UseSubmissionReturn {
           setExecutionTime(submission.executionTime)
           setMemoryUsed(submission.memoryUsed)
           setCompilerError(submission.compilerError)
+          setJudgeMessage(submission.judgeMessage ?? null)
+          setTestCaseSummary(submission.testCaseSummary ?? null)
+          setTestCaseResults(submission.testCaseResults ?? [])
+          setCurrentSubmission(submission)
           setIsJudging(false)
           setError(null)
           
@@ -401,7 +411,6 @@ export function useSubmission(): UseSubmissionReturn {
         }
       } catch (err: any) {
         console.error('[useSubmission] Polling error:', err)
-        // Continue polling despite errors (might be transient)
       }
       
       // Check if we've exceeded max attempts
@@ -415,8 +424,6 @@ export function useSubmission(): UseSubmissionReturn {
         
         // Display timeout error
         setError('Verdict not received. Please check status or refresh the page.')
-        
-        // Note: We don't clear currentSubmission here so the "Check Status" button can retry
       }
     }, POLL_INTERVAL_MS)
     
@@ -426,7 +433,7 @@ export function useSubmission(): UseSubmissionReturn {
       clearInterval(pollInterval)
       setIsPolling(false)
     }
-  }, [currentSubmission, isPolling])
+  }, [currentSubmission, isPolling, isJudging])
   
   /**
    * Effect: Switch back to Socket.io when connection is restored
@@ -496,6 +503,9 @@ export function useSubmission(): UseSubmissionReturn {
         setExecutionTime(null)
         setMemoryUsed(null)
         setCompilerError(null)
+        setJudgeMessage(null)
+        setTestCaseSummary(null)
+        setTestCaseResults([])
         setIsJudging(true)
         
         // ====================================================================
@@ -528,6 +538,9 @@ export function useSubmission(): UseSubmissionReturn {
           executionTime: null,
           memoryUsed: null,
           compilerError: null,
+          judgeMessage: null,
+          testCaseSummary: null,
+          testCaseResults: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }
@@ -590,6 +603,9 @@ export function useSubmission(): UseSubmissionReturn {
     setExecutionTime(null)
     setMemoryUsed(null)
     setCompilerError(null)
+    setJudgeMessage(null)
+    setTestCaseSummary(null)
+    setTestCaseResults([])
     setIsJudging(false)
     setError(null)
     setIsPolling(false)
@@ -628,6 +644,10 @@ export function useSubmission(): UseSubmissionReturn {
       setExecutionTime(submission.executionTime)
       setMemoryUsed(submission.memoryUsed)
       setCompilerError(submission.compilerError)
+      setJudgeMessage(submission.judgeMessage ?? null)
+      setTestCaseSummary(submission.testCaseSummary ?? null)
+      setTestCaseResults(submission.testCaseResults ?? [])
+      setCurrentSubmission(submission)
       
       // If verdict is no longer PENDING, stop judging state
       if (submission.verdict !== 'PENDING') {
@@ -651,6 +671,9 @@ export function useSubmission(): UseSubmissionReturn {
     executionTime,
     memoryUsed,
     compilerError,
+    judgeMessage,
+    testCaseSummary,
+    testCaseResults,
     isJudging,
     error,
     reset,
