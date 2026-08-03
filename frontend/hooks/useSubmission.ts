@@ -191,6 +191,7 @@ export function useSubmission(): UseSubmissionReturn {
   // CRITICAL FIX: Use ref to track current submission ID
   // This prevents stale closure issues in the Socket.io event handler
   const currentSubmissionIdRef = useRef<string | null>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
   // ==========================================================================
   // SOCKET.IO CONNECTION SETUP
@@ -359,39 +360,49 @@ export function useSubmission(): UseSubmissionReturn {
    * - Better UX than showing "connection lost" with no fallback
    */
   useEffect(() => {
-    // Poll while submission is pending & judging to guarantee state update even if socket drops
-    if (!currentSubmission || currentSubmission.verdict !== 'PENDING' || !isJudging || isPolling) {
+    const subId = currentSubmission?._id
+    const isPending = currentSubmission?.verdict === 'PENDING'
+
+    // If judging stops or submission is no longer PENDING, stop polling
+    if (!subId || !isPending || !isJudging) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+        setIsPolling(false)
+      }
       return
     }
-    
-    console.log('[useSubmission] Starting status polling backup')
-    
+
+    // Don't duplicate interval if already running
+    if (pollingIntervalRef.current) {
+      return
+    }
+
+    console.log('[useSubmission] Starting status polling backup for submission:', subId)
     setIsPolling(true)
     setPollingAttempts(0)
-    
-    // Polling configuration
-    const POLL_INTERVAL_MS = 2000 // 2 seconds
-    const MAX_POLL_ATTEMPTS = 30 // 60 seconds total
-    
+
+    const POLL_INTERVAL_MS = 2000
+    const MAX_POLL_ATTEMPTS = 30
     let pollCount = 0
-    
-    // Start polling interval
-    const pollInterval = setInterval(async () => {
+
+    pollingIntervalRef.current = setInterval(async () => {
       pollCount++
       setPollingAttempts(pollCount)
-      
       console.log(`[useSubmission] Polling attempt ${pollCount}/${MAX_POLL_ATTEMPTS}`)
-      
+
       try {
-        // Fetch submission status from API
-        const response = await api.get<{ submission: Submission }>(`/submissions/${currentSubmission._id}`)
+        const response = await api.get<{ submission: Submission }>(`/submissions/${subId}`)
         const submission = response.data.submission
-        
-        console.log('[useSubmission] Polling received verdict:', submission.verdict)
-        
-        // Check if verdict is no longer PENDING
-        if (submission.verdict !== 'PENDING') {
-          // Verdict received! Update state
+
+        if (submission && submission.verdict !== 'PENDING') {
+          console.log('[useSubmission] Polling received final verdict:', submission.verdict)
+
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+          }
+
           setVerdict(submission.verdict)
           setExecutionTime(submission.executionTime)
           setMemoryUsed(submission.memoryUsed)
@@ -401,57 +412,32 @@ export function useSubmission(): UseSubmissionReturn {
           setTestCaseResults(submission.testCaseResults ?? [])
           setCurrentSubmission(submission)
           setIsJudging(false)
-          setError(null)
-          
-          // Stop polling
-          clearInterval(pollInterval)
           setIsPolling(false)
-          
-          console.log('[useSubmission] Verdict received via polling, stopping')
+          setError(null)
         }
       } catch (err: any) {
         console.error('[useSubmission] Polling error:', err)
       }
-      
-      // Check if we've exceeded max attempts
+
       if (pollCount >= MAX_POLL_ATTEMPTS) {
-        console.error('[useSubmission] Polling timeout after', MAX_POLL_ATTEMPTS, 'attempts')
-        
-        // Stop polling
-        clearInterval(pollInterval)
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
+        }
         setIsPolling(false)
         setIsJudging(false)
-        
-        // Display timeout error
-        setError('Verdict not received. Please check status or refresh the page.')
+        setError('Verdict not received in time. Please check submission status or refresh.')
       }
     }, POLL_INTERVAL_MS)
-    
-    // Cleanup function
+
     return () => {
-      console.log('[useSubmission] Cleaning up polling interval')
-      clearInterval(pollInterval)
-      setIsPolling(false)
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+        setIsPolling(false)
+      }
     }
-  }, [currentSubmission, isPolling, isJudging])
-  
-  /**
-   * Effect: Switch back to Socket.io when connection is restored
-   * 
-   * This effect monitors Socket.io connection state and stops polling
-   * when the connection is restored.
-   */
-  useEffect(() => {
-    // If Socket.io reconnects while we're polling, stop polling
-    if (isPolling && isSocketConnected()) {
-      console.log('[useSubmission] Socket.io reconnected, stopping polling')
-      setIsPolling(false)
-      setPollingAttempts(0)
-      
-      // Socket.io will now handle verdict updates
-      // The verdict event listener is still active from the first useEffect
-    }
-  }, [isPolling])
+  }, [currentSubmission?._id, currentSubmission?.verdict, isJudging])
   
   // ==========================================================================
   // SUBMIT FUNCTION
