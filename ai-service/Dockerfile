@@ -3,6 +3,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Add AWS Lambda Web Adapter to allow running standard web servers (uvicorn) on AWS Lambda
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+ENV PORT=8000
+
 # Install dependencies globally in the container
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

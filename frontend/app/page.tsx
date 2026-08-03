@@ -63,9 +63,24 @@ function drawCover(canvas: HTMLCanvasElement, image: HTMLImageElement) {
     offsetY = (height - drawHeight) / 2
   }
 
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+
   ctx.clearRect(0, 0, width, height)
   ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight)
+
+  // Smooth out JPEG compression noise with a dark cinematic radial vignette
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, Math.min(width, height) * 0.15,
+    width / 2, height / 2, Math.max(width, height) * 0.75
+  )
+  gradient.addColorStop(0, 'rgba(2, 6, 23, 0.25)')
+  gradient.addColorStop(0.6, 'rgba(2, 6, 23, 0.65)')
+  gradient.addColorStop(1, 'rgba(2, 6, 23, 0.95)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
 }
+
 
 function formatDateTime(value: string) {
   const date = new Date(value)
@@ -511,29 +526,6 @@ export default function HomePage() {
         </section>
       </div>
 
-      <div className="w-full max-w-5xl flex justify-center">
-        <SubmitButton onSubmit={handleSubmit} isJudging={isJudging} />
-      </div>
-
-      <div className="w-full max-w-5xl bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
-        <p className="text-sm font-medium mb-2">
-          Current Language: <span className="text-blue-600">{currentLanguage.toUpperCase()}</span>
-        </p>
-        <p className="text-sm font-medium mb-2">
-          Current Code Length: {currentCode.length} characters
-        </p>
-        <p className="text-sm font-medium mb-2">
-          Status: <span className={isJudging ? 'text-yellow-600' : 'text-green-600'}>
-            {isJudging ? 'Judging...' : 'Ready'}
-          </span>
-        </p>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
-          Try typing in C++, then switch to Python and type there too. Switch back to C++ - your code is preserved! 🎉
-        </p>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-          Click Submit to test the 3-second judging state. The button will be disabled during judging.
-        </p>
-      </div>
-    </main>
+    </div>
   )
 }

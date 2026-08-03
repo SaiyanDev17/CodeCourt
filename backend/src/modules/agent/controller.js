@@ -11,7 +11,8 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 exports.getHint = async (req, res, next) => {
   try {
     const { problem_id, problem_slug } = req.body;
-    const user_id = req.user.id;
+    const user_id = req.user?.id || req.user?._id;
+
     
     // Forward request to AI service
     const response = await axios.post(`${AI_SERVICE_URL}/hint`, {
@@ -112,7 +113,8 @@ exports.getHints = async (req, res, next) => {
 exports.getMyHints = async (req, res, next) => {
   try {
     const { problem_id } = req.query;
-    const user_id = req.user.id;
+    const user_id = req.user?.id || req.user?._id;
+
 
     if (!problem_id) {
       return res.status(400).json({

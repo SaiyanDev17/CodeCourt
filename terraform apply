@@ -1,0 +1,475 @@
+PS D:\study\Projects\CodeCourt\terraform> terraform apply
+>>
+module.lambda.data.archive_file.dummy_zip: Reading...
+module.lambda.data.archive_file.dummy_zip: Read complete after 0s [id=de0e2211796812814029d47adf8e4d046658f9c1]
+module.eks.data.aws_availability_zones.available: Reading...
+module.ecr.aws_ecr_repository.repos["codecourt-ai-service"]: Refreshing state... [id=codecourt-ai-service]
+module.eks.aws_iam_role.node_role: Refreshing state... [id=codecourt-eks-node-role]
+module.ecr.aws_ecr_repository.repos["codecourt-backend"]: Refreshing state... [id=codecourt-backend]
+module.ecr.aws_ecr_repository.repos["codecourt-judge"]: Refreshing state... [id=codecourt-judge]
+module.eks.aws_iam_role.cluster_role: Refreshing state... [id=codecourt-eks-cluster-role]
+module.lambda.aws_iam_role.lambda_role: Refreshing state... [id=codecourt-ai-service-lambda-role]
+module.eks.aws_eip.nat: Refreshing state... [id=eipalloc-07ec63ccafd7fe866]
+module.lambda.aws_apigatewayv2_api.http_api: Refreshing state... [id=ofxvp2pj3b]
+module.s3.aws_s3_bucket.test_cases: Refreshing state... [id=codecourt-test-cases-bucket]
+module.eks.aws_vpc.eks_vpc: Refreshing state... [id=vpc-00f52d4db84831b51]
+module.eks.data.aws_availability_zones.available: Read complete after 1s [id=us-east-1]
+module.lambda.aws_apigatewayv2_stage.default_stage: Refreshing state... [id=$default]
+module.eks.aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly: Refreshing state... [id=codecourt-eks-node-role-20260802091619380900000004]
+module.eks.aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy: Refreshing state... [id=codecourt-eks-node-role-20260802091619813100000006]
+module.eks.aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy: Refreshing state... [id=codecourt-eks-node-role-20260802091619901700000007]
+module.eks.aws_iam_role_policy_attachment.cluster_AmazonEKSVPCResourceController: Refreshing state... [id=codecourt-eks-cluster-role-20260802091619510600000005]
+module.eks.aws_iam_role_policy_attachment.cluster_AmazonEKSClusterPolicy: Refreshing state... [id=codecourt-eks-cluster-role-20260802091619246000000003]
+module.lambda.aws_iam_role_policy_attachment.lambda_vpc_access: Refreshing state... [id=codecourt-ai-service-lambda-role-20260802091619123700000001]
+module.lambda.aws_iam_role_policy_attachment.lambda_basic_execution: Refreshing state... [id=codecourt-ai-service-lambda-role-20260802091619232900000002]
+module.lambda.aws_lambda_function.ai_service: Refreshing state... [id=codecourt-ai-service-lambda]
+module.eks.aws_internet_gateway.igw: Refreshing state... [id=igw-06cc2980aa44e345a]
+module.eks.aws_subnet.public[0]: Refreshing state... [id=subnet-0366cf809705f5d86]
+module.eks.aws_subnet.private[1]: Refreshing state... [id=subnet-0924e99f219f66fbe]
+module.eks.aws_subnet.private[0]: Refreshing state... [id=subnet-0fc299daccb73b0bd]
+module.eks.aws_subnet.public[1]: Refreshing state... [id=subnet-06ea9c16dbdbed284]
+module.eks.aws_route_table.public: Refreshing state... [id=rtb-0e6bdcdb434789c24]
+module.s3.aws_s3_bucket_public_access_block.test_cases: Refreshing state... [id=codecourt-test-cases-bucket]
+module.s3.aws_s3_bucket_versioning.test_cases: Refreshing state... [id=codecourt-test-cases-bucket]
+module.lambda.aws_lambda_permission.apigw_permission: Refreshing state... [id=AllowAPIGatewayInvoke]
+module.lambda.aws_apigatewayv2_integration.lambda_integration: Refreshing state... [id=a2245gm]
+module.eks.aws_nat_gateway.nat: Refreshing state... [id=nat-02c56afef25bc8abc]
+module.eks.aws_route_table_association.public[0]: Refreshing state... [id=rtbassoc-08e8e2f280c56787f]
+module.eks.aws_route_table_association.public[1]: Refreshing state... [id=rtbassoc-0d6dc3f458050afef]
+module.eks.aws_eks_cluster.main: Refreshing state... [id=codecourt-eks]
+module.lambda.aws_apigatewayv2_route.default_route: Refreshing state... [id=kp7qsmq]
+module.eks.aws_route_table.private: Refreshing state... [id=rtb-02ff34b1b6502ef37]
+module.eks.aws_route_table_association.private[1]: Refreshing state... [id=rtbassoc-0914a6697e09eb608]
+module.eks.aws_route_table_association.private[0]: Refreshing state... [id=rtbassoc-00f62109ca4736524]
+
+Note: Objects have changed outside of Terraform
+
+Terraform detected the following changes made outside of Terraform since the last "terraform apply" which may 
+have affected this plan:
+
+  # module.eks.aws_eks_cluster.main has been deleted
+  - resource "aws_eks_cluster" "main" {
+      - certificate_authority         = [
+          - {
+              - data = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJTXZpMnhjbFk4REV3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TmpBNE1ESXdPVEl5TVRsYUZ3MHpOakEzTXpBd09USTNNVGxhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURFMDV5K1hiN2hrUFl6MnlTaXl0OUVwbFMyWlgweVplMXVqZzh1TStQU1piMHJDY1BRYU5iZnphSjkKWUNXRSsxWHdQWlBrSDA2KytTUTB6eDlkc3JoOFZBZ3pUbllkVFN4QWVUVGI5WGFuR1IzdEZTZFJ1akp0UGxvQgpaSEJjSjY4MzNHL1o2M0ZHUWxhUmh0ZjZYZ0VRam1ucnJpYUNaR0FGZ2JKWkJ4WCtTRnRqZVRiQit3TVp3amZiCkdxL25ySVk1YklIYmRLTDNhK0FiS01jMEhBbi9ETWpvYXNveUdDYUQ1U0FnQUFISlR0cXhNb2JpTjRtRDRhdUIKQkdsWXFrRTdEODJGSEFScDZOVzVkUUFSQndJL3ExOUhVU3NsbG5maFZneUd1ejZMOUZTbG1VMzBaVWVRRDlVVgpWTUJSVllwQVVWcGhIU0lIT0o5SzdFS1NqVE5UQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJSTXNsODJjUXJtZmtLaGNGaWdoOW8xZzE5TG1qQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQlhyNTBtekZKbgowL3d4R3BOR0gzN3dnZVpuSnNlbW5pdGNWbjVta1VaTnlvM1MrRnpFSFpDTVg4OXhMaXVzVVNIbmtyZjNwbVozCkN5eTVhamczSE1yTGxDQ1JGVzlwemNCWmJZdXBSV2EwVGcvTGlWOStzb0ZUOUtUQTBmNlhxZHFHTGtiV2c0TWkKR2dIdExzc05VbkxXTFQvSmFsK2gxbFFJUDZ1ckJYc0l0cGFUdmlQTGFPZFo3RHdRTHQ4YlhpbXFSU0xBUWxzUwpGOEREV3IyWjZxZDdkSS9oVlZyUFRMUkVFTUFmOFB2WlUvZzFTVGlYL0lqbnpOTkdyWkF4aFp5ZXgyMDdBa0Q2CmhycEd0MTJXYWUzcTRHOXpOT3JrWGxVbW1hbzZtMWJPWFpoeldncFdMRGYwTWZhVGtucklDcVdjdDViVXI5cVkKbVYza0dwemVEeDhCCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+            },
+        ] -> null
+      - endpoint                      = "https://30467FF772D9D2FEA72E6A55419892A3.gr7.us-east-1.eks.amazonaws.com" -> null
+        id                            = "codecourt-eks"
+      - name                          = "codecourt-eks" -> null
+        tags                          = {
+            "Environment" = "production"
+            "ManagedBy"   = "Terraform"
+        }
+        # (10 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+
+Unless you have made equivalent changes to your configuration, or ignored the relevant attributes using       
+ignore_changes, the following plan may include actions to undo or respond to these changes.
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────── 
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are
+indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # module.eks.aws_eks_cluster.main will be created
+  + resource "aws_eks_cluster" "main" {
+      + arn                           = (known after apply)
+      + bootstrap_self_managed_addons = true
+      + certificate_authority         = (known after apply)
+      + cluster_id                    = (known after apply)
+      + created_at                    = (known after apply)
+      + endpoint                      = (known after apply)
+      + id                            = (known after apply)
+      + identity                      = (known after apply)
+      + name                          = "codecourt-eks"
+      + platform_version              = (known after apply)
+      + role_arn                      = "arn:aws:iam::501588780051:role/codecourt-eks-cluster-role"
+      + status                        = (known after apply)
+      + tags                          = {
+          + "Environment" = "production"
+          + "ManagedBy"   = "Terraform"
+        }
+      + tags_all                      = {
+          + "Environment" = "production"
+          + "ManagedBy"   = "Terraform"
+        }
+      + version                       = "1.36"
+
+      + access_config (known after apply)
+
+      + kubernetes_network_config (known after apply)
+
+      + upgrade_policy (known after apply)
+
+      + vpc_config {
+          + cluster_security_group_id = (known after apply)
+          + endpoint_private_access   = true
+          + endpoint_public_access    = true
+          + public_access_cidrs       = (known after apply)
+          + subnet_ids                = [
+              + "subnet-0366cf809705f5d86",
+              + "subnet-06ea9c16dbdbed284",
+              + "subnet-0924e99f219f66fbe",
+              + "subnet-0fc299daccb73b0bd",
+            ]
+          + vpc_id                    = (known after apply)
+        }
+    }
+
+  # module.eks.aws_eks_node_group.main will be created
+  + resource "aws_eks_node_group" "main" {
+      + ami_type               = (known after apply)
+      + arn                    = (known after apply)
+      + capacity_type          = (known after apply)
+      + cluster_name           = "codecourt-eks"
+      + disk_size              = (known after apply)
+      + id                     = (known after apply)
+      + instance_types         = [
+          + "t3.medium",
+        ]
+      + node_group_name        = "codecourt-eks-nodes"
+      + node_group_name_prefix = (known after apply)
+      + node_role_arn          = "arn:aws:iam::501588780051:role/codecourt-eks-node-role"
+      + release_version        = (known after apply)
+      + resources              = (known after apply)
+      + status                 = (known after apply)
+      + subnet_ids             = [
+          + "subnet-0924e99f219f66fbe",
+          + "subnet-0fc299daccb73b0bd",
+        ]
+      + tags                   = {
+          + "Environment" = "production"
+          + "ManagedBy"   = "Terraform"
+        }
+      + tags_all               = {
+          + "Environment" = "production"
+          + "ManagedBy"   = "Terraform"
+        }
+      + version                = (known after apply)
+
+      + node_repair_config (known after apply)
+
+      + scaling_config {
+          + desired_size = 2
+          + max_size     = 4
+          + min_size     = 1
+        }
+
+      + update_config (known after apply)
+    }
+
+Plan: 2 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  ~ eks_cluster_endpoint = "https://30467FF772D9D2FEA72E6A55419892A3.gr7.us-east-1.eks.amazonaws.com" -> (known after apply)
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes
+
+module.eks.aws_eks_cluster.main: Creating...
+module.eks.aws_eks_cluster.main: Still creating... [00m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [00m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [00m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [00m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [00m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [01m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [02m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [03m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [04m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [05m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [06m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [07m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [08m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [09m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [10m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m00s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m10s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m20s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m30s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m40s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [11m50s elapsed]
+module.eks.aws_eks_cluster.main: Still creating... [12m00s elapsed]
+module.eks.aws_eks_cluster.main: Creation complete after 12m2s [id=codecourt-eks]
+module.eks.aws_eks_node_group.main: Creating...
+module.eks.aws_eks_node_group.main: Still creating... [00m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [00m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [00m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [00m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [00m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [01m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [02m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [03m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [04m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [05m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [06m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [07m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [08m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [09m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [10m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [11m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [12m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [13m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [14m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [15m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [16m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [17m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [18m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [19m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [20m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [21m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [22m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [23m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [24m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [25m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [26m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [27m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [28m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [29m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [30m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [31m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [32m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [33m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [34m50s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m00s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m10s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m20s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m30s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m40s elapsed]
+module.eks.aws_eks_node_group.main: Still creating... [35m50s elapsed]
+╷
+│ Error: waiting for EKS Node Group (codecourt-eks:codecourt-eks-nodes) create: unexpected state 'CREATE_FAILED', wanted target 'ACTIVE'. last error: eks-codecourt-eks-nodes-fccfe104-7919-99d7-a53c-166d9601216b: AsgInstanceLaunchFailures: Could not launch On-Demand Instances. InvalidParameterCombination - The specified instance type is not eligible for Free Tier. For a list of Free Tier instance types, run 'describe-instance-types' with the filter 'free-tier-eligible=true'. Launching EC2 instance failed.
+│
+│   with module.eks.aws_eks_node_group.main,
+│   on modules\eks\main.tf line 226, in resource "aws_eks_node_group" "main":
+│  226: resource "aws_eks_node_group" "main" {
+│

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: codecourt-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  backend:
+    image: 501588780051.dkr.ecr.us-east-1.amazonaws.com/codecourt-backend:latest
+    container_name: codecourt-backend
+    user: "0:0"
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      # S3 variables should be mapped to the EC2 instance role natively
+      # MONGODB_URI and other secrets should be set here or injected via .env
+    depends_on:
+      - redis
+    # Mount docker socket so it can spawn judge containers locally
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+volumes:
+  redis_data:

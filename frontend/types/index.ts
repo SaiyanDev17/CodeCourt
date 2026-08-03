@@ -5,16 +5,19 @@
 // User Types
 // ============================================================================
 
-export type UserRole = 'admin' | 'problem_setter' | 'contestant';
+export type UserRole = 'admin' | 'problem_setter' | 'contestant' | string;
+
 
 export interface User {
-  _id: string;
+  id?: string;
+  _id?: string;
   username: string;
   email: string;
   role: UserRole;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 
 // ============================================================================
 // Problem Types

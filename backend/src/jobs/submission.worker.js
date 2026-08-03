@@ -1,71 +1,5 @@
 /**
- * Submission Worker (BullMQ)
- * 
- * VISION:
- * Execute user code submissions safely and efficiently in isolated Docker containers,
- * providing accurate verdicts with execution metrics. Enable horizontal scaling of
- * judge capacity to handle high submission volumes during contests.
- * 
- * WHY THIS EXISTS:
- * Code execution requires:
- * - Isolation (prevent malicious code from accessing system resources)
- * - Resource limits (CPU, memory, time)
- * - Accurate verdict determination (AC, WA, TLE, MLE, RE, CE)
- * - Scalability (handle 100+ submissions during contests)
- * 
- * This worker processes jobs from the BullMQ queue, spawns Docker containers
- * for safe execution, and updates submission verdicts in MongoDB.
- * 
- * WHAT IT DOES:
- * - Processes submission jobs from BullMQ queue (concurrency: 5)
- * - Downloads test cases from S3 (or uses sample tests)
- * - Compiles code (C++) or prepares runtime (Python)
- * - Executes code against test cases in isolated Docker containers
- * - Maps exit codes to verdicts (AC, WA, TLE, MLE, RE, CE)
- * - Updates submission status in MongoDB
- * - Emits real-time verdict events via Socket.io
- * - Updates contest leaderboards for AC submissions
- * 
- * DESIGN DECISIONS:
- * 1. Docker-Based Isolation:
- *    - --network=none prevents network access
- *    - --memory limits prevent memory bombs
- *    - --cpus=1 ensures fair CPU allocation
- *    - Temporary directories prevent file system pollution
- * 
- * 2. Concurrency (5 simultaneous judges):
- *    - Balances throughput vs resource usage
- *    - Prevents CPU oversubscription
- *    - Configurable via workerOptions
- * 
- * 3. Exit Code → Verdict Mapping:
- *    - 0 = Success (check output for AC/WA)
- *    - 124 = Timeout (TLE)
- *    - 137 = OOM killed (MLE)
- *    - Other = Runtime error (RE)
- * 
- * 4. Graceful Degradation:
- *    - Falls back to sample tests if S3 download fails
- *    - Continues without Socket.io if not initialized
- *    - Logs errors but doesn't crash worker
- * 
- * 5. Temporary Directory Cleanup:
- *    - Creates unique tmpdir per submission
- *    - Always cleans up (finally block)
- *    - Prevents disk space exhaustion
- * 
- * USAGE:
- * ```javascript
- * // Worker starts automatically when module is imported
- * const worker = require('./jobs/submission.worker');
- * 
- * // Worker processes jobs from 'submissions' queue
- * // Job data: { submissionId, code, language, problemId, userId, contestId }
- * 
- * // Worker emits events:
- * worker.on('completed', (job) => console.log('Job completed'));
- * worker.on('failed', (job, err) => console.error('Job failed', err));
- * ```
+ * Submission Worker (BullMQ) - Kubernetes Native
  */
 
 const { Worker } = require('bullmq');
@@ -73,51 +7,38 @@ const { workerOptions } = require('../config/bullmq');
 const Submission = require('../modules/submissions/model');
 const Problem = require('../modules/problems/model');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
-const { spawn } = require('child_process');
-const fs = require('fs').promises;
-const path = require('path');
-const os = require('os');
-const AdmZip = require('adm-zip');
 const redis = require('../config/redis');
 const s3Client = require('../config/s3');
 const { getBucketName } = require('../config/s3');
+const AdmZip = require('adm-zip');
+
+// Child process for running docker natively
+const { spawn } = require('child_process');
 
 const S3_BUCKET_NAME = getBucketName();
+const JUDGE_IMAGE_CPP = process.env.JUDGE_IMAGE_CPP || '501588780051.dkr.ecr.us-east-1.amazonaws.com/codecourt-judge:cpp';
+const JUDGE_IMAGE_PYTHON = process.env.JUDGE_IMAGE_PYTHON || '501588780051.dkr.ecr.us-east-1.amazonaws.com/codecourt-judge:python';
 
-// Create worker with centralized BullMQ configuration
-// Concurrency: 5 means 5 submissions can be judged simultaneously
-// Queue name 'submissions' must match queue name in submission.queue.js
 const worker = new Worker('submissions', async (job) => {
   const { submissionId, code, language, problemId, userId, contestId } = job.data;
   
   try {
     console.log(`Processing submission ${submissionId}`);
     
-    // Step 1: Fetch problem details from MongoDB
-    // Need timeLimit, memoryLimit, and test cases
     const problem = await Problem.findById(problemId);
-    if (!problem) {
-      throw new Error('Problem not found');
-    }
+    if (!problem) throw new Error('Problem not found');
     
-    // Step 2: Download test cases from S3 (or use sample test cases if no hidden tests)
-    // Hidden test cases are stored as ZIP files in S3 for security
     let testCases = problem.sampleTestCases;
     if (problem.hiddenTestCasesS3Key) {
       try {
         testCases = await downloadTestCases(problem.hiddenTestCasesS3Key);
       } catch (error) {
-        // Fall back to sample tests if S3 download fails
-        // This ensures judging continues even if S3 is unavailable
         console.warn('Failed to download hidden test cases, using sample tests:', error.message);
       }
     }
     
-    // Step 3: Run judge in Docker container
-    // Returns verdict object: { verdict, executionTime, memoryUsed, compilerError }
     const verdict = await runJudge(code, language, problem, testCases);
     
-    // Step 4: Update submission in MongoDB with verdict and metrics
     await Submission.findByIdAndUpdate(submissionId, {
       verdict: verdict.verdict,
       executionTime: verdict.executionTime,
@@ -125,9 +46,6 @@ const worker = new Worker('submissions', async (job) => {
       compilerError: verdict.compilerError
     });
     
-    // Step 5: Publish verdict event via Redis pub/sub for real-time updates
-    // The server process (which has Socket.io) subscribes to this channel
-    // and forwards the event to the client via socket/bridge.js
     try {
       await redis.publish('socket:verdict', JSON.stringify({
         userId,
@@ -143,40 +61,20 @@ const worker = new Worker('submissions', async (job) => {
       console.warn('Failed to publish verdict event:', error.message);
     }
     
-    // Step 6: If contest submission, update leaderboard
     if (contestId && verdict.verdict === 'AC') {
-      // AC submission: update score and emit leaderboard update
       try {
         const contestService = require('../modules/contests/service');
-        await contestService.recordSubmission(
-          contestId,
-          userId,
-          problemId,
-          verdict.verdict,
-          new Date()
-        );
+        await contestService.recordSubmission(contestId, userId, problemId, verdict.verdict, new Date());
         
-        // Publish updated leaderboard via Redis for Socket.io bridge
         const leaderboard = await contestService.getLeaderboard(contestId);
-        await redis.publish('socket:leaderboard', JSON.stringify({
-          contestId,
-          leaderboard
-        }));
+        await redis.publish('socket:leaderboard', JSON.stringify({ contestId, leaderboard }));
       } catch (error) {
         console.error('Failed to update contest score:', error);
       }
     } else if (contestId && (verdict.verdict === 'WA' || verdict.verdict === 'TLE' || verdict.verdict === 'MLE' || verdict.verdict === 'RE')) {
-      // Failed submission: record attempt for penalty calculation
-      // ICPC scoring: +20 minutes penalty per wrong attempt
       try {
         const contestService = require('../modules/contests/service');
-        await contestService.recordSubmission(
-          contestId,
-          userId,
-          problemId,
-          verdict.verdict,
-          new Date()
-        );
+        await contestService.recordSubmission(contestId, userId, problemId, verdict.verdict, new Date());
       } catch (error) {
         console.error('Failed to record contest attempt:', error);
       }
@@ -185,71 +83,51 @@ const worker = new Worker('submissions', async (job) => {
     return verdict;
   } catch (error) {
     console.error('Worker error:', error);
-    
-    // Update submission to error state so user knows something went wrong
     await Submission.findByIdAndUpdate(submissionId, {
       verdict: 'RE',
       compilerError: error.message
     });
-    
-    // Re-throw to mark job as failed (enables retry logic)
     throw error;
   }
 }, workerOptions);
 
-/**
- * Download test cases from S3
- * 
- * Retrieves hidden test cases from S3 bucket. Test cases are stored as ZIP files
- * containing input/output pairs for security (prevents users from seeing hidden tests).
- * 
- * @param {string} s3Key - S3 object key (e.g., 'problems/two-sum/tests.zip')
- * @returns {Promise<Array>} Array of test case objects: [{ input, output }, ...]
- * 
- * TODO: Implement ZIP extraction and parsing
- * Currently returns placeholder test case
- */
 async function downloadTestCases(s3Key) {
   try {
-    const command = new GetObjectCommand({
-      Bucket: S3_BUCKET_NAME,
-      Key: s3Key
-    });
-    
+    const command = new GetObjectCommand({ Bucket: S3_BUCKET_NAME, Key: s3Key });
     const response = await s3Client.send(command);
     
-    // Convert S3 stream to buffer
     const chunks = [];
-    for await (const chunk of response.Body) {
-      chunks.push(chunk);
-    }
+    for await (const chunk of response.Body) chunks.push(chunk);
     const buffer = Buffer.concat(chunks);
     
-    // Extract ZIP file using adm-zip
     const zip = new AdmZip(buffer);
     const zipEntries = zip.getEntries();
     
-    // Group files by base name (e.g., '1.in' and '1.out' -> base '1')
     const fileMap = {};
     for (const entry of zipEntries) {
       if (entry.isDirectory) continue;
-      
-      const fileName = entry.entryName.split('/').pop(); // Strip directory prefix for subdirectory support
-      // Accept .in/.txt for input, .out/.ans/.txt for output based on common CP formats
+      const entryPath = entry.entryName;
+      const fileName = entryPath.split('/').pop();
       const match = fileName.match(/^(.*)\.(in|out|txt|ans)$/i);
       
       if (match) {
         const baseName = match[1];
         const ext = match[2].toLowerCase();
         
-        if (!fileMap[baseName]) {
-          fileMap[baseName] = {};
-        }
-        
-        // Read file content
+        if (!fileMap[baseName]) fileMap[baseName] = {};
         const content = entry.getData().toString('utf8');
         
-        if (ext === 'in' || (ext === 'txt' && !fileMap[baseName].input)) {
+        // Check directory path first (handles input/1.txt + output/1.txt structure)
+        const pathLower = entryPath.toLowerCase();
+        if (pathLower.includes('/input/') || pathLower.startsWith('input/')) {
+          fileMap[baseName].input = content;
+        } else if (pathLower.includes('/output/') || pathLower.startsWith('output/')) {
+          fileMap[baseName].output = content;
+        } else if (ext === 'in') {
+          fileMap[baseName].input = content;
+        } else if (ext === 'out' || ext === 'ans') {
+          fileMap[baseName].output = content;
+        } else if (ext === 'txt' && !fileMap[baseName].input) {
           fileMap[baseName].input = content;
         } else {
           fileMap[baseName].output = content;
@@ -257,396 +135,240 @@ async function downloadTestCases(s3Key) {
       }
     }
     
-    // Convert map to array of complete test cases
     const parsedTestCases = [];
     for (const [baseName, pair] of Object.entries(fileMap)) {
       if (pair.input !== undefined && pair.output !== undefined) {
-        parsedTestCases.push({
-          input: pair.input,
-          output: pair.output
-        });
+        parsedTestCases.push({ input: pair.input, output: pair.output });
       }
     }
     
-    if (parsedTestCases.length === 0) {
-      console.warn('No valid input/output pairs found in ZIP. Using fallback.');
-      return [ { input: '1 2\n', output: '3\n' } ];
-    }
-    
+    if (parsedTestCases.length === 0) return [ { input: '1 2\n', output: '3\n' } ];
     return parsedTestCases;
   } catch (error) {
-    console.error('S3 download error:', error);
     throw error;
   }
 }
 
-function getSandboxConfig(tmpDir) {
-  const volumeName = process.env.JUDGE_VOLUME_NAME;
-  if (!volumeName) {
-    return {
-      volumeArg: `${tmpDir}:/sandbox`,
-      workDir: '/sandbox'
-    };
-  }
-
-  const baseName = path.basename(tmpDir);
-  return {
-    volumeArg: `${volumeName}:/sandbox`,
-    workDir: path.posix.join('/sandbox', baseName)
-  };
-}
-
-async function createJudgeDir() {
-  const volumeName = process.env.JUDGE_VOLUME_NAME;
-  if (!volumeName) {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'judge-'));
-    await fs.chmod(tmpDir, 0o777);
-    return tmpDir;
-  }
-
-  const volumePath = process.env.JUDGE_VOLUME_PATH || '/judge-tmp';
-  const tmpDir = await fs.mkdtemp(path.join(volumePath, 'judge-'));
-  await fs.chmod(tmpDir, 0o777);
-  return tmpDir;
-}
-
-/**
- * Run judge in Docker container
- * 
- * Executes user code against test cases in isolated Docker containers with
- * resource limits. Handles compilation (C++), execution, and verdict determination.
- * 
- * @param {string} code - Source code to execute
- * @param {string} language - Programming language ('cpp' or 'python')
- * @param {Object} problem - Problem object with timeLimit and memoryLimit
- * @param {Array} testCases - Array of { input, output } test cases
- * @returns {Promise<Object>} Verdict object: { verdict, executionTime, memoryUsed, compilerError }
- * 
- * Verdict codes:
- * - AC: Accepted (all test cases passed)
- * - WA: Wrong Answer (output doesn't match expected)
- * - TLE: Time Limit Exceeded (execution timeout)
- * - MLE: Memory Limit Exceeded (OOM killed)
- * - RE: Runtime Error (non-zero exit code)
- * - CE: Compilation Error (C++ compilation failed)
- */
 async function runJudge(code, language, problem, testCases) {
   const { timeLimit, memoryLimit } = problem;
-  
-  // Create temporary directory for this submission
-  // Each submission gets isolated directory to prevent interference
-  const tmpDir = await createJudgeDir();
-  const sandbox = getSandboxConfig(tmpDir);
-  
-  try {
-    // Write code to file in temporary directory
-    const codeFile = language === 'cpp' ? 'solution.cpp' : 'solution.py';
-    await fs.writeFile(path.join(tmpDir, codeFile), code);
-    
-    // Compile if C++ (Python is interpreted, no compilation needed)
-    if (language === 'cpp') {
-      const compileResult = await compileCode(sandbox);
-      if (!compileResult.success) {
-        // Compilation failed - return CE verdict with compiler error message
-        return {
-          verdict: 'CE',
-          executionTime: 0,
-          memoryUsed: 0,
-          compilerError: compileResult.error
-        };
-      }
-    }
-    
-    let maxExecutionTime = 0;
-    let peakMemoryUsed = 0;
-
-    // Run against test cases (stop at first failure)
-    // This is standard competitive programming behavior
-    for (let i = 0; i < testCases.length; i++) {
-      const testCase = testCases[i];
-      const result = await runTestCase(tmpDir, sandbox, language, testCase, timeLimit, memoryLimit, problem);
-      
-      maxExecutionTime = Math.max(maxExecutionTime, result.executionTime);
-      peakMemoryUsed = Math.max(peakMemoryUsed, result.memoryUsed);
-      
-      if (result.verdict !== 'AC') {
-        // First failed test case determines verdict
-        result.executionTime = maxExecutionTime;
-        result.memoryUsed = peakMemoryUsed;
-        return result;
-      }
-    }
-    
-    // All test cases passed - return AC verdict
-    return {
-      verdict: 'AC',
-      executionTime: maxExecutionTime,
-      memoryUsed: peakMemoryUsed,
-      compilerError: null
-    };
-  } finally {
-    // Always cleanup temporary directory to prevent disk space exhaustion
-    // This runs even if an error occurs
-    await fs.rm(tmpDir, { recursive: true, force: true });
-  }
-}
-
-/**
- * Compile C++ code in Docker container using custom judge image
- * 
- * Compiles C++ source code using the custom codecourt-judge-cpp image.
- * The image contains g++ compiler and judge.sh script for execution.
- * 
- * @param {Object} sandbox - Sandbox config with volumeArg and workDir
- * @returns {Promise<Object>} Compilation result: { success: boolean, error?: string }
- * 
- * Docker flags:
- * - --rm: Remove container after compilation
- * - -v: Mount tmpdir as /sandbox volume
- * - -w: Set working directory to /sandbox
- * 
- * Uses codecourt-judge-cpp image which includes:
- * - g++ compiler with C++17 support
- * - Alpine Linux base (lightweight)
- * - Non-root user for security
- */
-async function compileCode(sandbox) {
-  return new Promise((resolve) => {
-    const compile = spawn('docker', [
-      'run',
-      '--rm',
-      '-v', sandbox.volumeArg,
-      '-w', sandbox.workDir,
-      '--entrypoint', 'g++',
-      'codecourt-judge-cpp',
-      '-O2',
-      '-std=c++17',
-      '-o', 'solution',
-      'solution.cpp'
-    ]);
-    
-    let stderr = '';
-    compile.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    compile.on('close', (code) => {
-      if (code === 0) {
-        // Compilation successful
-        resolve({ success: true });
-      } else {
-        // Compilation failed - return compiler error message
-        resolve({ success: false, error: stderr });
-      }
-    });
-    
-    compile.on('error', (error) => {
-      // Docker spawn error (e.g., Docker not running or image not built)
-      resolve({ success: false, error: error.message });
-    });
-  });
-}
-
-/**
- * Run a single test case in Docker container
- * 
- * Executes compiled code (C++) or script (Python) against a single test case
- * in an isolated Docker container with resource limits and network disabled.
- * 
- * @param {string} tmpDir - Temporary directory containing code/executable
- * @param {Object} sandbox - Sandbox config with volumeArg and workDir
- * @param {string} language - Programming language ('cpp' or 'python')
- * @param {Object} testCase - Test case object: { input, output }
- * @param {number} timeLimit - Time limit in milliseconds
- * @param {number} memoryLimit - Memory limit in MB
- * @returns {Promise<Object>} Verdict object: { verdict, executionTime, memoryUsed, compilerError }
- * 
- * Docker security flags:
- * - --network=none: Disable network access (prevent external API calls)
- * - --memory: Limit memory usage (prevent memory bombs)
- * - --cpus=1: Limit to 1 CPU core (fair resource allocation)
- * 
- * Exit code mapping:
- * - 0: Success (check output for AC/WA)
- * - 124: Timeout (TLE verdict)
- * - 137: OOM killed (MLE verdict)
- * - Other: Runtime error (RE verdict)
- */
-async function runTestCase(tmpDir, sandbox, language, testCase, timeLimit, memoryLimit, problem) {
-  // Write input to file (not used currently, but useful for debugging)
-  await fs.writeFile(path.join(tmpDir, 'input.txt'), testCase.input);
-  
-  // Prepare Docker command with resource limits
-  // Add 2 second grace period to timeLimit to account for Docker overhead
   const timeLimitSeconds = Math.ceil(timeLimit / 1000) + 2;
-  const memoryLimitMB = memoryLimit;
+  const memoryLimitMB = memoryLimit || 256;
   
-  let dockerCmd;
-  if (language === 'cpp') {
-    // Run compiled C++ executable using input.txt inside the container
-    dockerCmd = [
+  const containerName = `judge-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  
+  const envArgs = [
+    '-e', `CODE=${Buffer.from(code).toString('base64')}`,
+    '-e', `LANG=${language}`,
+    '-e', `TEST_CASES=${testCases.length}`,
+    '-e', `TIME_LIMIT_S=${timeLimitSeconds}`
+  ];
+  
+  testCases.forEach((tc, i) => {
+    envArgs.push('-e', `INPUT_${i}=${Buffer.from(tc.input).toString('base64')}`);
+  });
+  
+  const script = `
+#!/bin/sh
+ext="py"
+if [ "$LANG" = "cpp" ]; then ext="cpp"; fi
+echo "$CODE" | base64 -d > solution.$ext
+
+if [ "$LANG" = "cpp" ]; then
+  g++ -O2 -std=c++17 -o solution solution.cpp 2> compile_err.txt
+  if [ $? -ne 0 ]; then
+    echo "---COMPILE_ERROR---"
+    cat compile_err.txt | base64
+    exit 0
+  fi
+  CMD="./solution"
+else
+  CMD="python3 solution.py"
+fi
+
+echo "---COMPILE_SUCCESS---"
+
+for i in $(seq 0 $(($TEST_CASES - 1))); do
+  eval "echo \\$INPUT_$i" | base64 -d > input_$i.txt
+  
+  start=$(date +%s%3N)
+  timeout ${timeLimitSeconds}s $CMD < input_$i.txt > out_$i.txt 2> err_$i.txt
+  exit_code=$?
+  end=$(date +%s%3N)
+  time_ms=$((end - start))
+  
+  echo "---TEST_$i---"
+  echo "EXIT_CODE: $exit_code"
+  echo "TIME_MS: $time_ms"
+  echo "STDOUT:"
+  cat out_$i.txt | base64
+  echo "STDERR:"
+  cat err_$i.txt | base64
+done
+  `;
+
+  const image = language === 'cpp' ? JUDGE_IMAGE_CPP : JUDGE_IMAGE_PYTHON;
+
+  return new Promise((resolve, reject) => {
+    const dockerArgs = [
       'run',
       '--rm',
-      '--network', 'none', // Security: disable network access
-      '--memory', `${memoryLimitMB}m`, // Memory limit
-      '--cpus', '1', // CPU limit
-      '-v', sandbox.volumeArg,
-      '-w', sandbox.workDir,
-      '--entrypoint', 'sh',
-      'codecourt-judge-cpp',
-      '-c', `timeout ${timeLimitSeconds}s ./solution < input.txt`
+      '-i',
+      '--name', containerName,
+      '--memory', `${memoryLimitMB}m`,
+      '--cpus', '1',
+      '--network', 'none',
+      '--security-opt', 'no-new-privileges',
+      '--entrypoint', '/bin/sh',
+      '--workdir', '/tmp',
+      '--user', '0',
+      ...envArgs,
+      image,
+      '-c', script
     ];
-  } else {
-    // Run Python script using input.txt inside the container
-    dockerCmd = [
-      'run',
-      '--rm',
-      '--network', 'none', // Security: disable network access
-      '--memory', `${memoryLimitMB}m`, // Memory limit
-      '--cpus', '1', // CPU limit
-      '-v', sandbox.volumeArg,
-      '-w', sandbox.workDir,
-      '--entrypoint', 'sh',
-      'codecourt-judge-python',
-      '-c', `timeout ${timeLimitSeconds}s python3 solution.py < input.txt`
-    ];
-  }
-  
-  return new Promise((resolve) => {
-    // Start high-resolution timer
-    const startTime = process.hrtime.bigint();
-    const run = spawn('docker', dockerCmd);
-    
-    let stdout = '';
-    let stderr = '';
-    
-    run.stdout.on('data', (data) => {
-      stdout += data.toString();
+
+    const child = spawn('docker', dockerArgs);
+
+    let output = '';
+    let errorOutput = '';
+
+    child.stdout.on('data', (data) => {
+      output += data.toString();
     });
-    
-    run.stderr.on('data', (data) => {
-      stderr += data.toString();
+
+    child.stderr.on('data', (data) => {
+      errorOutput += data.toString();
     });
-    
-    run.on('close', (code) => {
-      // Calculate execution time in milliseconds
-      const endTime = process.hrtime.bigint();
-      const executionTimeMs = Number((endTime - startTime) / 1000000n);
-      
-      // Memory usage is currently an estimate (10MB base + varying based on output)
-      // Docker stats would require an external polling mechanism which is heavy for MVP
-      const memoryUsedEst = 10 + Math.min(stdout.length / 1024, memoryLimit);
-      
-      // Map exit code to verdict
-      if (code === 124) {
-        // Timeout exit code from Alpine's timeout command
-        resolve({
-          verdict: 'TLE',
-          executionTime: timeLimit,
-          memoryUsed: memoryUsedEst,
-          compilerError: null
-        });
-      } else if (code === 137) {
-        // OOM killed by Docker (SIGKILL)
-        resolve({
-          verdict: 'MLE',
-          executionTime: executionTimeMs,
-          memoryUsed: memoryLimit,
-          compilerError: null
-        });
-      } else if (code !== 0) {
-        // Non-zero exit code = runtime error
+
+    child.on('close', (code) => {
+      try {
+        console.log(`Judge child process exited with code ${code}`);
+        if (errorOutput) console.error('Judge docker stderr:', errorOutput);
+        const result = parseJudgeLogs(output, problem, testCases, timeLimit, memoryLimitMB, errorOutput);
+        resolve(result);
+      } catch (err) {
+        console.error('Judge Error Parsing Logs:', err);
         resolve({
           verdict: 'RE',
-          executionTime: executionTimeMs,
-          memoryUsed: memoryUsedEst,
-          compilerError: stderr
+          executionTime: 0,
+          memoryUsed: 0,
+          compilerError: 'Internal Judge Error: ' + err.message
         });
-      } else {
-        // Exit code 0 - check output for correctness
-        const actualOutput = stdout.trim();
-        
-        if (isOutputCorrect(problem, testCase, actualOutput)) {
-          // Output matches - Accepted
-          resolve({
-            verdict: 'AC',
-            executionTime: executionTimeMs,
-            memoryUsed: memoryUsedEst,
-            compilerError: null
-          });
-        } else {
-          // Output doesn't match - Wrong Answer
-          resolve({
-            verdict: 'WA',
-            executionTime: executionTimeMs,
-            memoryUsed: memoryUsedEst,
-            compilerError: null
-          });
-        }
       }
     });
-    
-    run.on('error', (error) => {
-      // Docker spawn error
+
+    child.on('error', (err) => {
+      console.error('Docker Process Error:', err);
       resolve({
         verdict: 'RE',
         executionTime: 0,
         memoryUsed: 0,
-        compilerError: error.message
+        compilerError: 'Internal Judge Error: Failed to start docker container'
       });
     });
+
+    // Cleanup container just in case process hangs
+    setTimeout(() => {
+      spawn('docker', ['rm', '-f', containerName]);
+    }, (timeLimitSeconds * testCases.length * 1000) + 30000);
   });
+}
+
+function parseJudgeLogs(logs, problem, testCases, timeLimit, memoryLimit, stderrLog = '') {
+  const lines = logs.split('\n');
+  
+  if (lines.includes('---COMPILE_ERROR---')) {
+    const idx = lines.indexOf('---COMPILE_ERROR---');
+    const base64Err = lines.slice(idx + 1).join('').trim();
+    return {
+      verdict: 'CE',
+      executionTime: 0,
+      memoryUsed: 0,
+      compilerError: Buffer.from(base64Err, 'base64').toString('utf8')
+    };
+  }
+  
+  let maxExecutionTime = 0;
+  let peakMemoryUsed = 0;
+  
+  for (let tcIndex = 0; tcIndex < testCases.length; tcIndex++) {
+    const marker = `---TEST_${tcIndex}---`;
+    const idx = lines.indexOf(marker);
+    if (idx === -1) {
+      console.error(`Marker ${marker} not found in logs:`, logs, 'stderr:', stderrLog);
+      return { 
+        verdict: 'RE', 
+        executionTime: 0, 
+        memoryUsed: 0, 
+        compilerError: stderrLog ? `Judge Error: ${stderrLog}` : 'Test case output not found in logs' 
+      };
+    }
+    
+    const exitCodeStr = lines[idx + 1].split(': ')[1];
+    const timeMsStr = lines[idx + 2].split(': ')[1];
+    const exitCode = parseInt(exitCodeStr, 10);
+    const timeMs = parseInt(timeMsStr, 10);
+    
+    maxExecutionTime = Math.max(maxExecutionTime, timeMs);
+    const memoryUsedEst = 10; 
+    peakMemoryUsed = Math.max(peakMemoryUsed, memoryUsedEst);
+    
+    const stdoutIdx = lines.indexOf('STDOUT:', idx);
+    const stderrIdx = lines.indexOf('STDERR:', idx);
+    
+    const stdoutBase64 = lines.slice(stdoutIdx + 1, stderrIdx).join('');
+    let nextMarkerIdx = lines.indexOf(`---TEST_${tcIndex + 1}---`);
+    if (nextMarkerIdx === -1) nextMarkerIdx = lines.length;
+    const stderrBase64 = lines.slice(stderrIdx + 1, nextMarkerIdx).join('');
+    
+    const actualOutput = Buffer.from(stdoutBase64, 'base64').toString('utf8').trim();
+    const stderrOutput = Buffer.from(stderrBase64, 'base64').toString('utf8').trim();
+    
+    if (exitCode === 124) {
+      return { verdict: 'TLE', executionTime: timeLimit, memoryUsed: memoryUsedEst, compilerError: null };
+    } else if (exitCode === 137) {
+      return { verdict: 'MLE', executionTime: timeMs, memoryUsed: memoryLimit, compilerError: null };
+    } else if (exitCode !== 0) {
+      return { verdict: 'RE', executionTime: timeMs, memoryUsed: memoryUsedEst, compilerError: stderrOutput };
+    } else {
+      if (!isOutputCorrect(problem, testCases[tcIndex], actualOutput)) {
+        return { verdict: 'WA', executionTime: timeMs, memoryUsed: memoryUsedEst, compilerError: null };
+      }
+    }
+  }
+  
+  return { verdict: 'AC', executionTime: maxExecutionTime, memoryUsed: peakMemoryUsed, compilerError: null };
 }
 
 function isOutputCorrect(problem, testCase, actualOutput) {
   if (problem && problem.slug === 'two-sum') {
     return isTwoSumOutputCorrect(testCase.input, actualOutput);
   }
-
-  const expectedOutput = testCase.output.trim();
-  return actualOutput === expectedOutput;
+  return actualOutput === testCase.output.trim();
 }
 
 function isTwoSumOutputCorrect(input, actualOutput) {
   const tokens = input.trim().split(/\s+/).map(Number);
-  if (tokens.length < 3) {
-    return false;
-  }
+  if (tokens.length < 3) return false;
 
   const n = tokens[0];
   const nums = tokens.slice(1, 1 + n);
   const target = tokens[1 + n];
 
-  if (!Number.isInteger(n) || nums.length !== n || typeof target !== 'number') {
-    return false;
-  }
+  if (!Number.isInteger(n) || nums.length !== n || typeof target !== 'number') return false;
 
   const matches = actualOutput.match(/-?\d+/g);
-  if (!matches || matches.length !== 2) {
-    return false;
-  }
+  if (!matches || matches.length !== 2) return false;
 
   const i = Number(matches[0]);
   const j = Number(matches[1]);
-  if (!Number.isInteger(i) || !Number.isInteger(j)) {
-    return false;
-  }
+  if (!Number.isInteger(i) || !Number.isInteger(j)) return false;
 
-  if (i < 0 || j < 0 || i >= n || j >= n || i === j) {
-    return false;
-  }
+  if (i < 0 || j < 0 || i >= n || j >= n || i === j) return false;
 
   return nums[i] + nums[j] === target;
 }
 
-// Worker event handlers for monitoring and debugging
-worker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed`);
-});
+worker.on('completed', (job) => console.log(`Job ${job.id} completed`));
+worker.on('failed', (job, err) => console.error(`Job ${job.id} failed:`, err));
 
-worker.on('failed', (job, err) => {
-  console.error(`Job ${job.id} failed:`, err);
-});
-
-// Export worker instance for graceful shutdown in server.js
 module.exports = worker;

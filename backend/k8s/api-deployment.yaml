@@ -5,7 +5,9 @@ metadata:
   name: api
   namespace: codecourt
 spec:
-  replicas: 2
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: api
@@ -14,9 +16,12 @@ spec:
       labels:
         app: api
     spec:
+      serviceAccountName: api-service-account
       containers:
       - name: api
-        image: ghcr.io/codecourt/api:latest
+        image: 501588780051.dkr.ecr.us-east-1.amazonaws.com/codecourt-backend:latest
+        securityContext:
+          runAsUser: 0
         ports:
         - containerPort: 5000
         envFrom:
@@ -26,23 +31,23 @@ spec:
             name: codecourt-secrets
         resources:
           requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
             memory: "512Mi"
             cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /health
             port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /health
             port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -55,4 +60,4 @@ spec:
   ports:
   - port: 5000
     targetPort: 5000
-  type: ClusterIP
+  type: LoadBalancer
