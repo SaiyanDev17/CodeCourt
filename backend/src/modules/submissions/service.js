@@ -935,7 +935,10 @@ class SubmissionsService {
           createdAt: 1,                        // Submission timestamp
           problemId: '$problemId',             // Problem ID (keep original field)
           problemTitle: '$problem.title',      // Flatten: problem.title → problemTitle
-          problemSlug: '$problem.slug'         // Flatten: problem.slug → problemSlug
+          problemSlug: '$problem.slug',        // Flatten: problem.slug → problemSlug
+          judgeMessage: 1,                     // Detailed judge output / message
+          testCaseSummary: 1,                  // Passed / failed test case counts
+          testCaseResults: 1                   // Detailed test case statuses
           // Note: code field is automatically excluded by only including specific fields
         }
       },

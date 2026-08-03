@@ -16,6 +16,20 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/store/auth.store'
 
+const getApiBaseUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL
+
+  if (
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'https:' &&
+    configuredUrl?.startsWith('http://')
+  ) {
+    return '/api'
+  }
+
+  return configuredUrl || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api')
+}
+
 /**
  * Create the Axios Instance
  * 
@@ -26,9 +40,9 @@ import { useAuthStore } from '@/store/auth.store'
  */
 const api = axios.create({
   // Base URL for all requests
-  // In production: NEXT_PUBLIC_API_URL = https://api.codecourt.com/api
+  // In production on Vercel: use /api and let vercel.json rewrite to the backend
   // In development: defaults to http://localhost:5000/api
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL: getApiBaseUrl(),
   
   // withCredentials: true is CRITICAL for authentication
   // This tells Axios to include cookies in requests

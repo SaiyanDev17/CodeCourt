@@ -5,16 +5,19 @@
 // User Types
 // ============================================================================
 
-export type UserRole = 'admin' | 'problem_setter' | 'contestant';
+export type UserRole = 'admin' | 'problem_setter' | 'contestant' | string;
+
 
 export interface User {
-  _id: string;
+  id?: string;
+  _id?: string;
   username: string;
   email: string;
   role: UserRole;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 
 // ============================================================================
 // Problem Types
@@ -65,6 +68,19 @@ export interface Submission {
   executionTime: number | null; // milliseconds
   memoryUsed: number | null; // megabytes
   compilerError: string | null;
+  judgeMessage?: string | null;
+  testCaseSummary?: {
+    total: number;
+    passed: number;
+    failed: number;
+    firstFailedCase: number | null;
+  } | null;
+  testCaseResults?: Array<{
+    testNumber: number;
+    status: 'PASSED' | 'FAILED' | 'TLE' | 'MLE' | 'RE';
+    executionTime: number | null;
+    memoryUsed: number | null;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -185,6 +201,9 @@ export interface VerdictEvent {
   executionTime: number | null;
   memoryUsed: number | null;
   compilerError: string | null;
+  judgeMessage?: string | null;
+  testCaseSummary?: Submission['testCaseSummary'];
+  testCaseResults?: Submission['testCaseResults'];
 }
 
 export interface LeaderboardUpdateEvent {

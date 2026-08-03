@@ -23,10 +23,12 @@ import { create } from 'zustand'
  */
 interface User {
   id: string          // MongoDB ObjectId as string
+  _id?: string         // MongoDB ObjectId alias
   username: string    // Unique username
   email: string       // User's email address
   role: string        // One of: 'admin' | 'problem_setter' | 'contestant'
 }
+
 
 /**
  * AuthState Interface

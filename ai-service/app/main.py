@@ -27,3 +27,11 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+# Mangum handler for AWS Lambda / API Gateway execution
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    handler = None
+

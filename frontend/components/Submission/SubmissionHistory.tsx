@@ -35,6 +35,8 @@ interface SubmissionHistoryItem {
   executionTime: number | null
   memoryUsed: number | null
   language: SubmissionLanguage
+  judgeMessage?: string | null
+  testCaseSummary?: Submission['testCaseSummary']
   createdAt: string
 }
 
@@ -206,6 +208,12 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
             {detailLoadingId === submission._id && (
               <span className="text-cyan-300">Loading details...</span>
             )}
+
+            {submission.testCaseSummary && submission.testCaseSummary.total > 0 && (
+              <span>
+                Tests: {submission.testCaseSummary.passed}/{submission.testCaseSummary.total}
+              </span>
+            )}
           </div>
         </button>
       ))}
@@ -267,6 +275,10 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
                   <pre className="overflow-auto rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     {selectedSubmission.compilerError}
                   </pre>
+                ) : selectedSubmission.judgeMessage ? (
+                  <pre className="overflow-auto rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+                    {selectedSubmission.judgeMessage}
+                  </pre>
                 ) : (
                   <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
                     No compiler or runtime message was recorded for this submission.
@@ -276,9 +288,41 @@ export function SubmissionHistory({ problemId }: SubmissionHistoryProps) {
 
               <section>
                 <h5 className="mb-2 text-sm font-semibold text-slate-100">Test Cases</h5>
-                <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
-                  Detailed passed/failed test case counts are not currently stored by the judge. The verdict above shows the final result.
-                </p>
+                {selectedSubmission.testCaseSummary && selectedSubmission.testCaseSummary.total > 0 ? (
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+                    <p>
+                      Passed {selectedSubmission.testCaseSummary.passed}/{selectedSubmission.testCaseSummary.total}
+                      {selectedSubmission.testCaseSummary.firstFailedCase
+                        ? `, first failed: #${selectedSubmission.testCaseSummary.firstFailedCase}`
+                        : ''}
+                    </p>
+                    {selectedSubmission.testCaseResults && selectedSubmission.testCaseResults.length > 0 && (
+                      <div className="mt-3 grid grid-cols-8 gap-2 sm:grid-cols-12">
+                        {selectedSubmission.testCaseResults.map((testCase) => (
+                          <div
+                            key={testCase.testNumber}
+                            title={`Test ${testCase.testNumber}: ${testCase.status}`}
+                            className={`flex h-8 w-8 items-center justify-center rounded border text-xs font-semibold ${
+                              testCase.status === 'PASSED'
+                                ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-300'
+                                : 'border-red-400/60 bg-red-500/15 text-red-300'
+                            }`}
+                          >
+                            {testCase.testNumber}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : selectedSubmission.verdict === 'AC' ? (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+                    Passed all test cases (Accepted).
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+                    Verdict: <span className="font-semibold text-slate-100">{selectedSubmission.verdict}</span>. Detailed test breakdown is stored for new submissions.
+                  </p>
+                )}
               </section>
             </div>
           </div>

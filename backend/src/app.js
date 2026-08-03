@@ -98,10 +98,30 @@ const app = express();
 
 // CORS configuration - MUST be first to allow frontend requests
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : [FRONTEND_URL];
+
 app.use(cors({
-  origin: FRONTEND_URL, // Allow requests from frontend
-  credentials: true // Allow cookies (for JWT refresh tokens)
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl/mobile/server-side rewrites)
+    if (!origin) return callback(null, true);
+    
+    if (
+      ALLOWED_ORIGINS.includes(origin) || 
+      origin.endsWith('.vercel.app') || 
+      origin.includes('localhost') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      callback(null, true);
+    } else {
+      // Allow for deployment flexibility
+      callback(null, true);
+    }
+  },
+  credentials: true
 }));
+
 
 // Body parsers - Parse JSON and URL-encoded request bodies
 app.use(express.json({ limit: '10mb' })); // JSON parser with 10mb limit (large code submissions)

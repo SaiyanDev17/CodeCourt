@@ -120,6 +120,21 @@ export default function MonacoEditor({
           language={language}
           value={currentCode}
           onChange={handleEditorChange}
+          onMount={(editor) => {
+            const domNode = editor.getDomNode()
+            if (domNode) {
+              domNode.addEventListener(
+                'keydown',
+                (e) => {
+                  // Specifically prevent Vercel Toolbar comment hotkey ('c') from bubbling
+                  if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    e.stopPropagation()
+                  }
+                },
+                true
+              )
+            }
+          }}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },

@@ -349,6 +349,31 @@ const submissionSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    judgeMessage: {
+      type: String,
+      default: null,
+    },
+
+    testCaseSummary: {
+      total: { type: Number, default: 0 },
+      passed: { type: Number, default: 0 },
+      failed: { type: Number, default: 0 },
+      firstFailedCase: { type: Number, default: null },
+    },
+
+    testCaseResults: [
+      {
+        testNumber: { type: Number, required: true },
+        status: {
+          type: String,
+          enum: ['PASSED', 'FAILED', 'TLE', 'MLE', 'RE'],
+          required: true,
+        },
+        executionTime: { type: Number, default: null },
+        memoryUsed: { type: Number, default: null },
+      },
+    ],
   },
   {
     /**

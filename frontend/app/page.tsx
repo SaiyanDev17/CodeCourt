@@ -63,9 +63,24 @@ function drawCover(canvas: HTMLCanvasElement, image: HTMLImageElement) {
     offsetY = (height - drawHeight) / 2
   }
 
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+
   ctx.clearRect(0, 0, width, height)
   ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight)
+
+  // Smooth out JPEG compression noise with a dark cinematic radial vignette
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, Math.min(width, height) * 0.15,
+    width / 2, height / 2, Math.max(width, height) * 0.75
+  )
+  gradient.addColorStop(0, 'rgba(2, 6, 23, 0.25)')
+  gradient.addColorStop(0.6, 'rgba(2, 6, 23, 0.65)')
+  gradient.addColorStop(1, 'rgba(2, 6, 23, 0.95)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
 }
+
 
 function formatDateTime(value: string) {
   const date = new Date(value)
@@ -510,6 +525,7 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
     </div>
   )
 }
