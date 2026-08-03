@@ -258,22 +258,18 @@ export function useSubmission(): UseSubmissionReturn {
         hasCompilerError: !!data.compilerError
       })
       
-      // CRITICAL FIX: Use ref instead of state callback
       // Check if this verdict is for the current submission
       const currentId = currentSubmissionIdRef.current
       
-      if (!currentId) {
-        console.log('[useSubmission] No current submission, ignoring verdict')
-        return
-      }
-      
-      if (data.submissionId !== currentId) {
+      if (currentId && String(data.submissionId) !== String(currentId)) {
         console.log('[useSubmission] Verdict is for different submission, ignoring', {
           expected: currentId,
           received: data.submissionId
         })
         return
       }
+
+      currentSubmissionIdRef.current = String(data.submissionId)
       
       console.log('[useSubmission] Verdict matches current submission, updating state')
       
@@ -297,6 +293,7 @@ export function useSubmission(): UseSubmissionReturn {
         prev
           ? {
               ...prev,
+              _id: String(data.submissionId),
               verdict: data.verdict,
               executionTime: data.executionTime,
               memoryUsed: data.memoryUsed,
@@ -311,16 +308,18 @@ export function useSubmission(): UseSubmissionReturn {
       // Also fetch the full saved submission from DB to ensure persistence parity
       try {
         const response = await api.get<{ submission: Submission }>(`/submissions/${data.submissionId}`)
-        const submission = response.data.submission
+        const submission = response.data?.submission || (response.data as any)
 
-        setVerdict(submission.verdict)
-        setExecutionTime(submission.executionTime)
-        setMemoryUsed(submission.memoryUsed)
-        setCompilerError(submission.compilerError ?? null)
-        setJudgeMessage(submission.judgeMessage ?? data.judgeMessage ?? null)
-        setTestCaseSummary(submission.testCaseSummary ?? data.testCaseSummary ?? null)
-        setTestCaseResults(submission.testCaseResults ?? data.testCaseResults ?? [])
-        setCurrentSubmission(submission)
+        if (submission) {
+          setVerdict(submission.verdict)
+          setExecutionTime(submission.executionTime)
+          setMemoryUsed(submission.memoryUsed)
+          setCompilerError(submission.compilerError ?? null)
+          setJudgeMessage(submission.judgeMessage ?? data.judgeMessage ?? null)
+          setTestCaseSummary(submission.testCaseSummary ?? data.testCaseSummary ?? null)
+          setTestCaseResults(submission.testCaseResults ?? data.testCaseResults ?? [])
+          setCurrentSubmission(submission)
+        }
       } catch (err) {
         console.error('[useSubmission] Failed to refresh completed submission:', err)
       }
@@ -393,7 +392,7 @@ export function useSubmission(): UseSubmissionReturn {
 
       try {
         const response = await api.get<{ submission: Submission }>(`/submissions/${subId}`)
-        const submission = response.data.submission
+        const submission = response.data?.submission || (response.data as any)
 
         if (submission && submission.verdict !== 'PENDING') {
           console.log('[useSubmission] Polling received final verdict:', submission.verdict)
